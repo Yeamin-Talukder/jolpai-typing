@@ -83,6 +83,34 @@ describe('profile', () => {
   });
 });
 
+describe('course progress', () => {
+  const learn = (over: Record<string, unknown> = {}) => ({
+    v: 1, lessons: { 'home-1': { stars: 2, wpm: 9, acc: 95, tries: 1, done: 1 } },
+    keyStats: { j: { hit: 10, miss: 1, ms: 2000 }, '&': { hit: 1, miss: 0, ms: 300 } },
+    days: ['2026-11-16'], secs: 40, openAll: false, exams: [], updated: serverTimestamp(), ...over,
+  });
+
+  it('the owner can save and read it', async () => {
+    const db = env.authenticatedContext('alice').firestore();
+    await assertSucceeds(setDoc(doc(db, 'users/alice/learn/progress'), learn()));
+    await assertSucceeds(setDoc(doc(db, 'users/alice/learn/progress'), learn({ secs: 90 })));
+    await assertSucceeds(getDoc(doc(db, 'users/alice/learn/progress')));
+    await assertSucceeds(deleteDoc(doc(db, 'users/alice/learn/progress')));
+  });
+
+  it('nobody else can, and bad data is refused', async () => {
+    const bob = env.authenticatedContext('bob').firestore();
+    await assertFails(setDoc(doc(bob, 'users/alice/learn/progress'), learn()));
+    await assertFails(getDoc(doc(bob, 'users/alice/learn/progress')));
+    const db = env.authenticatedContext('alice').firestore();
+    await assertFails(setDoc(doc(db, 'users/alice/learn/other'), learn()));
+    await assertFails(setDoc(doc(db, 'users/alice/learn/progress'), learn({ admin: true })));
+    await assertFails(setDoc(doc(db, 'users/alice/learn/progress'), learn({ secs: -5 })));
+    await assertFails(setDoc(doc(db, 'users/alice/learn/progress'), learn({ days: Array(401).fill('2026-01-01') })));
+    await assertFails(setDoc(doc(db, 'users/alice/learn/progress'), learn({ exams: Array(51).fill({ t: 1 }) })));
+  });
+});
+
 describe('shared profiles', () => {
   const share = (owner: string, over: Record<string, unknown> = {}) => ({
     owner, name: 'Alice', photo: null, joined: 1763200000000, updated: serverTimestamp(), tests: 3, time: 90.5,

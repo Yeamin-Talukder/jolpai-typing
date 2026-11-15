@@ -16,7 +16,7 @@ import { addExtras } from './extras';
 import { deviceKind, deviceOf, type Device } from './device';
 import { askAmount, askText, customAmount, customText, setCustomAmount, typeableWords, TEXT_LIMITS, type AmountMode } from './custom';
 import { POSTS } from './exam';
-import { accountsEnabled, clearAccountHistory, currentShareId, currentUser, initAccount, loadShared, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
+import { accountsEnabled, clearAccountHistory, currentShareId, currentUser, initAccount, loadShared, onLearnChange, resetLearnEverywhere, saveLearnToAccount, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
 import { SharePanel } from './share';
 import { renderAbout } from './about';
 import { Learn } from './learn';
@@ -924,6 +924,7 @@ function showView(v: View) {
     sharedData = null;
   }
   view = v;
+  document.body.dataset.view = v;
   profileEl.hidden = v !== 'profile' && v !== 'shared';
   settingsEl.hidden = v !== 'settings';
   aboutEl.hidden = v !== 'about';
@@ -999,7 +1000,24 @@ $('nav-history').addEventListener('click', () => showView(view === 'profile' ? '
 $('nav-settings').addEventListener('click', () => showView(view === 'settings' ? 'test' : 'settings'));
 $('nav-about').addEventListener('click', () => showView(view === 'about' ? 'test' : 'about'));
 $('nav-learn').addEventListener('click', () => showView('learn'));
-const learn = new Learn(learnEl, prefs, () => showView('test'));
+const learn = new Learn(learnEl, {
+  prefs,
+  onLeave: () => showView('test'),
+  signedIn: () => !!currentUser(),
+  onProgress: p => saveLearnToAccount(p),
+  onReset: () => resetLearnEverywhere(),
+  onExamDone: (rec, s, setup) => {
+    // a mock exam is a passage test too: it joins the history and the profile
+    const entry: Entry = {
+      id: newId(), t: rec.t, lang: rec.lang, mode: 'passage', amount: setup.secs, label: `exam ${setup.secs / 60}m`,
+      wpm: round1(s.wpm), net: round1(s.net), raw: round1(s.gross), acc: round1(s.acc), sec: rec.secs,
+      words: s.typed, wrong: s.errors, dev: deviceKind(),
+    };
+    addEntry(entry);
+    saveToAccount(entry);
+  },
+});
+onLearnChange(() => learn.refresh());
 $('nav-test').addEventListener('click', () => showView('test'));
 $('nav-test').classList.add('active');
 profileEl.addEventListener('keydown', e => {

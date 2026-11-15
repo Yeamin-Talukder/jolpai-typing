@@ -21,6 +21,20 @@ service cloud.firestore {
         && d.results is list && d.results.size() <= 500;
     }
 
+    // Course progress: one document per person, written whole each time.
+    function validLearn(d) {
+      return d.keys().hasOnly(['v', 'lessons', 'keyStats', 'days', 'secs', 'openAll', 'exams', 'updated'])
+        && d.keys().hasAll(['v', 'lessons', 'keyStats', 'days', 'secs', 'openAll', 'updated'])
+        && d.v == 1
+        && d.lessons is map && d.lessons.size() <= 100
+        && d.keyStats is map && d.keyStats.size() <= 200
+        && d.days is list && d.days.size() <= 400
+        && (d.secs is int || d.secs is float) && d.secs >= 0
+        && d.openAll is bool
+        && (!('exams' in d) || (d.exams is list && d.exams.size() <= 50))
+        && d.updated is timestamp;
+    }
+
     match /shared/{shareId} {
       allow get: if true;
       allow list: if false;
@@ -74,6 +88,11 @@ service cloud.firestore {
         && (!('shareId' in request.resource.data) || request.resource.data.shareId == null
             || (request.resource.data.shareId is string && request.resource.data.shareId.size() <= 40));
       allow delete: if isOwner(uid);
+
+      match /learn/{docId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && docId == 'progress' && validLearn(request.resource.data);
+      }
 
       match /results/{resultId} {
         allow read, delete: if isOwner(uid);

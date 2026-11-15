@@ -4,6 +4,7 @@
 import { firebaseConfig, useEmulators } from './firebase-config';
 import { clearHistory, loadHistory, replaceHistory, type Entry } from './history';
 import { cleanEntry, mergeHistories } from './account-sync';
+import { applyExam, applyRun, fromCloud, hasProgress, loadLearn, mergeLearn, resetLearn, saveLearn, toCloud, type LearnData, type Pending } from './learn/progress';
 
 export interface AccountUser { uid: string; name: string; email: string; photo: string | null; joined: number | null }
 
@@ -12,6 +13,7 @@ type FsMod = typeof import('firebase/firestore');
 interface Fb { auth: import('firebase/auth').Auth; db: import('firebase/firestore').Firestore; a: AuthMod; f: FsMod }
 
 const OWNER_KEY = 'jolpai-type:owner'; // whose results are in this browser ('' = guest)
+const LEARN_OWNER_KEY = 'jolpai-type:learn-owner'; // whose course progress is in this browser
 
 let fb: Fb | null = null;
 let user: AccountUser | null = null;
@@ -53,10 +55,12 @@ export async function initAccount(onChange: (u: AccountUser | null) => void) {
       const created = Date.parse(u.metadata.creationTime || '');
       user = { uid: u.uid, name: u.displayName || u.email || 'you', email: u.email || '', photo: u.photoURL, joined: Number.isNaN(created) ? null : created };
       try { await syncHistory(); } catch (err) { console.warn('Could not sync history with your account', err); }
+      try { await syncLearn(); } catch (err) { console.warn('Could not sync course progress with your account', err); }
     } else {
       // Signed out: remove this person's results from the browser so the
       // next person on a shared computer does not see them.
       if (getOwner()) { clearHistory(); setOwner(''); }
+      if (getLearnOwner()) { resetLearn(); setLearnOwner(''); learnListener?.(); }
       user = null;
       shareId = null;
     }
@@ -89,6 +93,102 @@ async function syncHistory() {
   setOwner(u.uid);
   if (shareId) publishShare(); // name, photo or results may have changed
 }
+
+// ---------- course progress ----------
+// One document per person, users/{uid}/learn/progress. Every finished lesson
+// or exam is added inside a transaction, so two devices never overwrite or
+// double-count each other. Runs that could not be saved yet wait in
+// `pending` and are added on the next try.
+
+let learnListener: (() => void) | null = null;
+/** Called whenever course progress changes because of the account. */
+export function onLearnChange(cb: () => void) { learnListener = cb; }
+
+function getLearnOwner(): string {
+  try { return localStorage.getItem(LEARN_OWNER_KEY) || ''; } catch { return ''; }
+}
+function setLearnOwner(uid: string) {
+  try { if (uid) localStorage.setItem(LEARN_OWNER_KEY, uid); else localStorage.removeItem(LEARN_OWNER_KEY); } catch { /* ignore */ }
+}
+
+function replay(d: LearnData, pending: Pending[]) {
+  for (const p of pending) {
+    if (p.run && p.goal !== undefined) applyRun(d, p.run, p.goal);
+    if (p.exam) applyExam(d, p.exam);
+    if (p.openAll !== undefined) d.openAll = p.openAll;
+  }
+}
+
+async function learnRef() {
+  const { db, f } = await load();
+  return { db, f, ref: f.doc(db, 'users', user!.uid, 'learn', 'progress') };
+}
+
+/** After sign-in: join this browser's progress with the account's. */
+async function syncLearn() {
+  const { db, f, ref } = await learnRef();
+  const uid = user!.uid;
+  const local = loadLearn();
+  const owner = getLearnOwner();
+  const merged = await f.runTransaction(db, async tx => {
+    const snap = await tx.get(ref);
+    let d = fromCloud(snap.exists() ? snap.data() : undefined);
+    let changed = false;
+    if (owner === '' && hasProgress(local)) { d = mergeLearn(d, local); changed = true; }      // guest progress joins the account
+    else if (owner === uid && local.pending.length) { replay(d, local.pending); changed = true; } // runs that were not saved yet
+    // progress left by another account stays out of this one
+    if (changed) tx.set(ref, { ...toCloud(d), updated: f.serverTimestamp() });
+    return d;
+  });
+  saveLearn(merged);
+  setLearnOwner(uid);
+  learnListener?.();
+}
+
+let flushing: Promise<void> | null = null;
+/** Add the waiting runs to the account, one transaction for all of them. */
+function flushLearn(): Promise<void> {
+  if (flushing) return flushing.then(() => flushLearn());
+  flushing = (async () => {
+    const batch = loadLearn().pending.slice();
+    if (!user || !batch.length) return;
+    const { db, f, ref } = await learnRef();
+    const cloud = await f.runTransaction(db, async tx => {
+      const snap = await tx.get(ref);
+      const d = fromCloud(snap.exists() ? snap.data() : undefined);
+      replay(d, batch);
+      tx.set(ref, { ...toCloud(d), updated: f.serverTimestamp() });
+      return d;
+    });
+    // the account copy now has the batch; anything finished meanwhile still waits
+    const rest = loadLearn().pending.slice(batch.length);
+    replay(cloud, rest);
+    cloud.pending = rest;
+    saveLearn(cloud);
+    learnListener?.();
+  })().finally(() => { flushing = null; });
+  return flushing;
+}
+
+/** A lesson, exam or setting change that is already saved in this browser: add it to the account too. */
+export function saveLearnToAccount(p: Pending) {
+  if (!user) return;
+  const d = loadLearn();
+  d.pending.push(p);
+  saveLearn(d);
+  flushLearn().catch(err => console.warn('Could not save course progress to your account; it will be retried', err));
+}
+
+/** Start the course again, in the account too. */
+export async function resetLearnEverywhere() {
+  resetLearn();
+  if (!user) return;
+  const { f, ref } = await learnRef();
+  await f.deleteDoc(ref);
+  setLearnOwner(user.uid);
+}
+
+export const learnInAccount = () => !!user;
 
 export async function signIn() {
   const { auth, a } = await load();

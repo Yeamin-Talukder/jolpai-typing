@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { bijoyToUnicode } from '../bijoy';
 import { LESSONS, UNITS, drillItems, keysOf, lessonWords, timedItems, typeable, wordItems, weakKeysLesson } from './course';
 import { ALL_KEYS, fingerFor, needsShift, physicalKey, shiftFinger } from './fingers';
-import { isUnlocked, learnStreak, nextLesson, recordRun, starsFor, weakKeys, type LearnData } from './progress';
+import { emptyLearn, isUnlocked, learnStreak, nextLesson, recordRun, starsFor, weakKeys, type LearnData } from './progress';
 
 const only = (k: string, allowed: string) => [...k].every(c => allowed.includes(c));
-const fresh = (): LearnData => ({ v: 1, lessons: {}, keys: {}, days: [], secs: 0, openAll: false });
+const fresh = (): LearnData => emptyLearn();
 
 describe('Bijoy course content', () => {
   it('has unique lessons in known units', () => {

@@ -4,6 +4,7 @@ import { icon } from '../icons';
 import { LESSONS, UNITS, lessonsInUnit, weakKeysLesson, type CourseLesson } from './course';
 import { fingerFor, physicalKey } from './fingers';
 import { doneCount, isUnlocked, keyAccuracy, learnedKeys, learnStreak, nextLesson, starCount, weakKeys, type LearnData } from './progress';
+import { POSTS } from '../exam';
 import { keyText, starSvg } from './player';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
@@ -17,7 +18,7 @@ function fmtTime(secs: number) {
 
 const stars = (n: number) => `<span class="ln-stars" aria-label="${n} of 3 stars">${[0, 1, 2].map(i => `<i class="${i < n ? 'on' : ''}">${starSvg()}</i>`).join('')}</span>`;
 
-export interface PageActions { start(l: CourseLesson): void; openAll(on: boolean): void; reset(): void }
+export interface PageActions { start(l: CourseLesson): void; exam(): void; openAll(on: boolean): void; reset(): void; signedIn: boolean }
 
 export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions) {
   const done = doneCount(d), total = LESSONS.length;
@@ -53,6 +54,21 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
         <div class="ln-stat">${starSvg()}<b>${starCount(d)}<small>/${total * 3}</small></b><span>stars</span></div>
         <div class="ln-stat">${icon('flame', 18)}<b>${learnStreak(d)}</b><span>day streak</span></div>
         <div class="ln-stat">${icon('clock', 18)}<b>${fmtTime(d.secs)}</b><span>practised</span></div>
+      </section>
+
+      <section class="ln-exam">
+        <div class="ln-exam-text">
+          <div class="ln-eyebrow">${icon('exam', 16)}mock exam · মডেল টেস্ট</div>
+          <h2>Ready for the real typing test?</h2>
+          <p>Type a passage the way job exams do it: the text on paper, your answer in a box, backspace allowed and no live speed. At the end you see your net speed, pass or fail for ${POSTS.map(p => esc(p.name)).join(' and ')}, and every mistake word by word.</p>
+          <button class="btn primary" data-exam>${icon('play', 15)}take a mock exam</button>
+        </div>
+        <div class="ln-exam-list">${d.exams.length ? d.exams.slice(-4).reverse().map(e => `
+          <div class="ln-exam-row ${e.pass ? 'pass' : 'fail'}">
+            <span class="ln-exam-mark">${icon(e.pass ? 'check' : 'x', 14)}</span>
+            <span class="ln-exam-what">${e.lang === 'bangla' ? 'বাংলা' : 'English'} · ${Math.round((e.limit ?? e.secs) / 60)} minute test<small>${new Date(e.t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</small></span>
+            <span class="ln-exam-net"><b>${Math.round(e.net)}</b> net wpm</span>
+          </div>`).join('') : `<p class="ln-exam-empty">${icon('clock', 16)}Your mock exams will show up here.</p>`}</div>
       </section>
 
       ${started ? '' : `<section class="ln-method">
@@ -109,7 +125,7 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
       <footer class="ln-foot">
         <label class="ln-switch"><input type="checkbox" data-openall ${d.openAll ? 'checked' : ''}/><span></span>Open every lesson (if you already know the basics)</label>
         ${started ? `<button class="h-clear" data-reset>${icon('trash', 14)}reset course progress</button>` : ''}
-        <p class="ln-note">${icon('device', 13)}Course progress is saved in this browser.</p>
+        <p class="ln-note">${act.signedIn ? `${icon('cloud', 13)}Course progress is saved to your account, on every device you sign in on.` : `${icon('device', 13)}Course progress is saved in this browser. Sign in to keep it on every device.`}</p>
       </footer>
     </div>`;
 
@@ -146,6 +162,7 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
       act.start(LESSONS.find(l => l.id === b.dataset.lesson)!);
       return;
     }
+    if (t.closest('[data-exam]')) { act.exam(); return; }
     const w = t.closest<HTMLElement>('[data-weak]');
     if (w) { act.start(weakKeysLesson(w.dataset.weak!, learnedKeys(d) || LESSONS[3].allowed)); return; }
     if (t.closest('[data-reset]')) {

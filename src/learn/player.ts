@@ -8,7 +8,7 @@ import { keySound } from '../sound';
 import type { Prefs } from '../prefs';
 import { drillItems, LESSONS, timedItems, UNITS, wordItems, type CourseLesson, type Explainer } from './course';
 import { FINGER_NAME, fingerFor, handsSvg, needsShift, physicalKey, shiftFinger, showFinger, type Finger } from './fingers';
-import { recordRun, threeStarWpm, type KeyRec, type LearnData } from './progress';
+import { loadLearn, recordRun, threeStarWpm, type KeyRec, type Pending } from './progress';
 
 type Step =
   | { kind: 'explain'; cards: Explainer[] }
@@ -19,10 +19,11 @@ interface Target { key: string; item: number; seg: number }
 
 export interface PlayerOptions {
   lesson: CourseLesson;
-  data: LearnData;
   prefs: Prefs;
   onExit(): void;
   onStart(l: CourseLesson): void;
+  /** A run was saved in this browser (so it can go to the account too). */
+  onRecorded?(p: Pending): void;
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
@@ -466,7 +467,10 @@ export class LessonPlayer {
     this.root.querySelector('.lp')!.classList.add('no-guide');
     const l = this.o.lesson;
     const acc = this.acc(), wpm = this.wpm();
-    const { stars, improved } = recordRun(this.o.data, { lessonId: l.id, acc, wpm, secs: this.typingSecs, keys: this.keyStats }, l.goal);
+    // read progress fresh: the account may have updated it during the lesson
+    const run = { lessonId: l.id, acc, wpm, secs: this.typingSecs, keys: this.keyStats };
+    const { stars, improved } = recordRun(loadLearn(), run, l.goal);
+    this.o.onRecorded?.({ run, goal: l.goal });
     const i = LESSONS.indexOf(l);
     const next = i >= 0 ? LESSONS[i + 1] : undefined;
     const missed = Object.entries(this.keyStats).filter(([, v]) => v.miss > 0).sort((a, b) => b[1].miss - a[1].miss).slice(0, 6);

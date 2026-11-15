@@ -1,5 +1,6 @@
-// Course progress, kept in this browser: stars per lesson, accuracy and speed
-// per key, practice time and the days you practised.
+// Course progress: stars per lesson, accuracy and speed per key, practice
+// time, the days you practised and mock exam results. Kept in this browser,
+// and in the account when signed in (account.ts syncs it with these helpers).
 import { LESSONS, type CourseLesson } from './course';
 
 export interface LessonRec { stars: number; wpm: number; acc: number; tries: number; done: number }
@@ -11,10 +12,21 @@ export interface LearnData {
   days: string[];      // yyyy-mm-dd, newest last
   secs: number;        // total practice time
   openAll: boolean;    // every lesson unlocked
+  exams: ExamRec[];    // mock exams, newest last
+  pending: Pending[];  // finished runs not yet saved to the account (this browser only)
 }
 
+/** A finished mock exam. */
+export interface ExamRec {
+  t: number; lang: 'english' | 'bangla'; secs: number; limit?: number; // seconds used, and the exam's length
+  gross: number; net: number; acc: number; words: number; errors: number;
+  post: string; need: number; pass: boolean;
+}
+export interface Pending { run?: RunResult; goal?: number; exam?: ExamRec; openAll?: boolean }
+
 const KEY = 'jolpai-type:learn';
-const empty = (): LearnData => ({ v: 1, lessons: {}, keys: {}, days: [], secs: 0, openAll: false });
+export const emptyLearn = (): LearnData => ({ v: 1, lessons: {}, keys: {}, days: [], secs: 0, openAll: false, exams: [], pending: [] });
+const empty = emptyLearn;
 
 export function loadLearn(): LearnData {
   try {
@@ -68,6 +80,18 @@ export interface RunResult { lessonId: string; acc: number; wpm: number; secs: n
 
 /** Store a finished run; returns the stars it earned and whether that beat the old best. */
 export function recordRun(d: LearnData, r: RunResult, goal: number): { stars: number; improved: boolean } {
+  const out = applyRun(d, r, goal);
+  saveLearn(d);
+  return out;
+}
+
+const addDay = (d: LearnData, t = new Date()) => {
+  const day = dayStr(t);
+  if (!d.days.includes(day)) d.days = [...d.days, day].sort().slice(-400);
+};
+
+/** Apply a finished run to progress (no saving). */
+export function applyRun(d: LearnData, r: RunResult, goal: number): { stars: number; improved: boolean } {
   const stars = starsFor(r.acc, r.wpm, goal);
   const old = d.lessons[r.lessonId];
   if (r.lessonId !== 'weak') {
@@ -83,11 +107,71 @@ export function recordRun(d: LearnData, r: RunResult, goal: number): { stars: nu
     const o = d.keys[k] ?? { hit: 0, miss: 0, ms: 0 };
     d.keys[k] = { hit: o.hit + v.hit, miss: o.miss + v.miss, ms: o.ms + v.ms };
   }
-  const today = dayStr(new Date());
-  if (d.days[d.days.length - 1] !== today) d.days = [...d.days, today].slice(-400);
+  addDay(d);
   d.secs += Math.round(r.secs);
-  saveLearn(d);
   return { stars, improved: stars > (old?.stars ?? 0) };
+}
+
+/** Apply a finished mock exam (no saving). */
+export function applyExam(d: LearnData, e: ExamRec) {
+  d.exams = [...d.exams, e].sort((a, b) => a.t - b.t).slice(-50);
+  addDay(d, new Date(e.t));
+  d.secs += Math.round(e.secs);
+}
+
+/** Join two sets of progress (guest progress into an account): best of each lesson, everything else added up. */
+export function mergeLearn(a: LearnData, b: LearnData): LearnData {
+  const out = emptyLearn();
+  for (const id of new Set([...Object.keys(a.lessons), ...Object.keys(b.lessons)])) {
+    const x = a.lessons[id], y = b.lessons[id];
+    if (!x || !y) { out.lessons[id] = { ...(x ?? y)! }; continue; }
+    out.lessons[id] = {
+      stars: Math.max(x.stars, y.stars), wpm: Math.max(x.wpm, y.wpm), acc: Math.max(x.acc, y.acc),
+      tries: x.tries + y.tries, done: Math.min(...[x.done, y.done].filter(Boolean)) || 0,
+    };
+  }
+  for (const k of new Set([...Object.keys(a.keys), ...Object.keys(b.keys)])) {
+    const x = a.keys[k] ?? { hit: 0, miss: 0, ms: 0 }, y = b.keys[k] ?? { hit: 0, miss: 0, ms: 0 };
+    out.keys[k] = { hit: x.hit + y.hit, miss: x.miss + y.miss, ms: x.ms + y.ms };
+  }
+  out.days = [...new Set([...a.days, ...b.days])].sort().slice(-400);
+  out.secs = a.secs + b.secs;
+  out.openAll = a.openAll || b.openAll;
+  out.exams = [...a.exams, ...b.exams].sort((p, q) => p.t - q.t).slice(-50);
+  return out;
+}
+
+/** Anything worth keeping? */
+export const hasProgress = (d: LearnData) =>
+  Object.keys(d.lessons).length > 0 || Object.keys(d.keys).length > 0 || d.exams.length > 0 || d.openAll;
+
+// ---------- the account copy ----------
+// Stored at users/{uid}/learn/progress. The key stats are saved as "keyStats",
+// since "keys" is a method name in the security rules.
+
+export function toCloud(d: LearnData) {
+  return { v: 1, lessons: d.lessons, keyStats: d.keys, days: d.days, secs: d.secs, openAll: d.openAll, exams: d.exams };
+}
+
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
+/** Read the account copy back, keeping only well-formed parts. */
+export function fromCloud(raw: Record<string, unknown> | undefined): LearnData {
+  const d = emptyLearn();
+  if (!raw) return d;
+  const lessons = (raw.lessons ?? {}) as Record<string, Partial<LessonRec>>;
+  for (const [id, x] of Object.entries(lessons)) {
+    if (x && typeof x === 'object') d.lessons[id] = { stars: num(x.stars), wpm: num(x.wpm), acc: num(x.acc), tries: num(x.tries), done: num(x.done) };
+  }
+  const keys = (raw.keyStats ?? {}) as Record<string, Partial<KeyRec>>;
+  for (const [k, x] of Object.entries(keys)) {
+    if (x && typeof x === 'object') d.keys[k] = { hit: num(x.hit), miss: num(x.miss), ms: num(x.ms) };
+  }
+  if (Array.isArray(raw.days)) d.days = raw.days.filter((x): x is string => typeof x === 'string').slice(-400);
+  d.secs = num(raw.secs);
+  d.openAll = raw.openAll === true;
+  if (Array.isArray(raw.exams)) d.exams = (raw.exams as ExamRec[]).filter(e => e && typeof e.t === 'number').slice(-50);
+  return d;
 }
 
 /** Accuracy (0 to 1) of a key, or null with too little practice. */
