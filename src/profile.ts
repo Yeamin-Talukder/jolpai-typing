@@ -6,7 +6,8 @@ import { DEVICE_NAME, deviceOf, type Device } from './device';
 
 export interface ProfileUser { name: string; email: string; photo: string | null; joined: number | null }
 export type ResultFilter = 'all' | 'time' | 'words' | 'passage' | 'lesson' | 'custom';
-export interface ProfileView { lang: Lang; filter: ResultFilter; shown: number; open: string | null; dev: Device }
+export type ProfileTab = 'progress' | 'results' | 'activity';
+export interface ProfileView { lang: Lang; filter: ResultFilter; shown: number; open: string | null; dev: Device; tab?: ProfileTab }
 
 /** Someone's shared profile, shown read-only. */
 export interface SharedData {
@@ -109,22 +110,18 @@ function pbSection(list: Entry[]) {
     </div>`).join('')}</div>`;
 }
 
-function statsGrid(list: Entry[]) {
+/** The key numbers, one row, under the progress chart. */
+function statsStrip(list: Entry[]) {
   const last10 = list.slice(-10);
   const cells: [string, string][] = [
     ['highest wpm', r0(Math.max(0, ...list.map(e => e.wpm)))],
     ['average wpm', r0(avg(list.map(e => e.wpm)))],
-    ['average wpm (last 10)', r0(avg(last10.map(e => e.wpm)))],
-    ['highest raw', r0(Math.max(0, ...list.map(e => e.raw)))],
-    ['average raw', r0(avg(list.map(e => e.raw)))],
-    ['highest accuracy', `${r0(Math.max(0, ...list.map(e => e.acc)))}%`],
+    ['last 10 average', r0(avg(last10.map(e => e.wpm)))],
     ['average accuracy', `${r0(avg(list.map(e => e.acc)))}%`],
-    ['average accuracy (last 10)', `${r0(avg(last10.map(e => e.acc)))}%`],
-    ['tests', String(list.length)],
-    ['time typing', fmtDuration(list.reduce((a, e) => a + e.sec, 0))],
-    ['words typed (about)', r0(list.reduce((a, e) => a + (e.raw * e.sec) / 60, 0))],
+    ['last 10 accuracy', `${r0(avg(last10.map(e => e.acc)))}%`],
+    ['words typed', r0(list.reduce((a, e) => a + (e.raw * e.sec) / 60, 0))],
   ];
-  return `<div class="p-grid">${cells.map(([l, v]) => `<div class="p-cell"><div class="label">${l}</div><div class="val">${v}</div></div>`).join('')}</div>`;
+  return `<div class="pf-strip">${cells.map(([l, v]) => `<div class="p-cell"><div class="label">${l}</div><div class="val">${v}</div></div>`).join('')}</div>`;
 }
 
 /** A year of tests, one square per day, like a contribution calendar. */
@@ -216,43 +213,52 @@ export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileU
       + (open ? `<tr class="h-detail"><td colspan="7">${detail(e, all, !!shared)}</td></tr>` : '');
   }).join('');
 
+  const tab: ProfileTab = view.tab ?? 'progress';
+  const devName = DEVICE_NAME[view.dev];
+  const empty = `<div class="h-empty-box">${icon('chart', 32)}<p class="h-empty">No ${view.filter === 'all' ? '' : `${FILTERS.find(f => f[0] === view.filter)![1]} `}tests yet in this language on ${view.dev === 'mobile' ? 'a phone or tablet' : 'a computer'}.${shared ? '' : ' Finish one and it will show up here.'}</p></div>`;
+  const panel = list.length === 0 ? empty
+    : tab === 'results' ? `<div class="pf-results"><div class="h-table-wrap"><table class="h-table">
+        <thead><tr><th>date</th><th>test</th><th class="num">wpm</th><th class="num opt">raw</th><th class="num opt">net</th><th class="num">acc</th><th class="num opt">time</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+      ${list.length > view.shown ? `<button id="h-more" class="btn more">show ${Math.min(25, list.length - view.shown)} more · ${list.length - view.shown} left</button>` : ''}</div>`
+    : tab === 'activity' ? activity(all)
+    : `<div class="pf-progress">${list.length < 2 ? '<p class="h-empty">Take a few more tests to see your progress here.</p>' : '<div class="pg-wrap"></div>'}${statsStrip(list)}</div>`;
+  const tabBtn = (t: ProfileTab, ic: IconName, label: string) =>
+    `<button role="tab" class="pf-tab ${tab === t ? 'active' : ''}" data-ptab="${t}" aria-selected="${tab === t}">${icon(ic, 15)}${label}</button>`;
+
   el.innerHTML = `
-    ${profileCard(all, everything, user, opts)}
-    <div class="p-filters">
-      <div class="group seg p-dev" role="group" aria-label="Device">
-        ${(['desktop', 'mobile'] as Device[]).map(d => `<button data-dev="${d}" class="${view.dev === d ? 'active' : ''}" title="Results typed on ${d === 'mobile' ? 'a phone or tablet' : 'a computer'}">${icon(d === 'mobile' ? 'phone' : 'device', 15)}${DEVICE_NAME[d]}<span class="cnt">${perDevice[d]}</span></button>`).join('')}
+    <div class="pf">
+      ${profileCard(all, everything, user, opts)}
+      <div class="pf-bar">
+        <div class="group seg p-dev" role="group" aria-label="Device">
+          ${(['desktop', 'mobile'] as Device[]).map(d => `<button data-dev="${d}" class="${view.dev === d ? 'active' : ''}" title="Results typed on ${d === 'mobile' ? 'a phone or tablet' : 'a computer'}">${icon(d === 'mobile' ? 'phone' : 'device', 15)}${DEVICE_NAME[d]}<span class="cnt">${perDevice[d]}</span></button>`).join('')}
+        </div>
+        <div class="group seg h-lang" role="group" aria-label="Language">
+          <button data-hlang="bangla" class="${view.lang === 'bangla' ? 'active' : ''}">বাংলা (বিজয়)</button>
+          <button data-hlang="english" class="${view.lang === 'english' ? 'active' : ''}">english</button>
+        </div>
+        <div class="group seg h-filter" role="group" aria-label="Test type">${FILTERS.map(([f, label]) => `<button data-filter="${f}" class="${view.filter === f ? 'active' : ''}">${label}</button>`).join('')}</div>
       </div>
-      <div class="group seg h-lang" role="group" aria-label="Language">
-        <button data-hlang="bangla" class="${view.lang === 'bangla' ? 'active' : ''}">বাংলা (বিজয়)</button>
-        <button data-hlang="english" class="${view.lang === 'english' ? 'active' : ''}">english</button>
-      </div>
-    </div>
-    <h2>${icon('trophy', 15)}personal bests <span class="h2-sub">· ${DEVICE_NAME[view.dev]}</span></h2>
-    ${pbSection(inLang)}
-    <h2>${icon('calendar', 15)}activity <span class="h2-sub">· ${DEVICE_NAME[view.dev]}</span></h2>
-    ${activity(all)}
-    <div class="h-head">
-      <h2>${icon('zap', 15)}stats</h2>
-      <div class="group seg h-filter">${FILTERS.map(([f, label]) => `<button data-filter="${f}" class="${view.filter === f ? 'active' : ''}">${label}</button>`).join('')}</div>
-    </div>
-    ${list.length === 0
-      ? `<div class="h-empty-box">${icon('chart', 32)}<p class="h-empty">No ${view.filter === 'all' ? '' : `${FILTERS.find(f => f[0] === view.filter)![1]} `}tests yet in this language on ${view.dev === 'mobile' ? 'a phone or tablet' : 'a computer'}.${shared ? '' : ' Finish one and it will show up here.'}</p></div>`
-      : `${statsGrid(list)}
-    <h2>${icon('trend', 15)}progress</h2>
-    ${list.length < 2 ? '<p class="h-empty">Take a few more tests to see your progress here.</p>' : '<div class="pg-wrap"></div>'}
-    <h2>${icon('clock', 15)}results</h2>
-    <div class="h-table-wrap"><table class="h-table">
-      <thead><tr><th>date</th><th>test</th><th class="num">wpm</th><th class="num opt">raw</th><th class="num opt">net</th><th class="num">acc</th><th class="num opt">time</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>
-    ${list.length > view.shown ? `<button id="h-more" class="btn more">show ${Math.min(25, list.length - view.shown)} more · ${list.length - view.shown} left</button>` : ''}`}
-    ${shared ? `<div class="p-invite">
-      <div><div class="p-invite-title">Practise typing like ${esc(shared.name.split(' ')[0])}</div>
-      <p>Jolpai Type is free typing practice for Bangla (Bijoy) and English, made for job typing tests.</p></div>
-      <button id="p-start" class="btn primary">${icon('keyboard', 15)}start typing</button>
-    </div>` : `<div class="h-foot">
-      <span class="h-where">${icon(user ? 'cloud' : 'device', 14)}${user ? `Saved to your account (${esc(user.email || user.name)}), on every device you sign in on.` : 'Saved only in this browser. Sign in to keep your history on every device.'}</span>
-      ${all.length ? `<button id="h-clear" class="h-clear">${icon('trash', 14)}clear all history</button>` : ''}
-    </div>`}`;
+      <section class="pf-main">
+        <div class="pf-tabs" role="tablist">
+          ${tabBtn('progress', 'trend', 'progress')}${tabBtn('results', 'clock', `results <span class="cnt">${list.length}</span>`)}${tabBtn('activity', 'calendar', 'activity')}
+          <span class="pf-tabs-note">${devName} · ${view.lang === 'bangla' ? 'বাংলা' : 'english'}${view.filter === 'all' ? '' : ` · ${FILTERS.find(f => f[0] === view.filter)![1]}`}</span>
+        </div>
+        <div class="pf-panel" data-tab="${tab}" role="tabpanel">${panel}</div>
+      </section>
+      <aside class="pf-side">
+        <h2>${icon('trophy', 15)}personal bests <span class="h2-sub">· ${devName}</span></h2>
+        ${pbSection(inLang)}
+      </aside>
+      ${shared ? `<footer class="pf-foot p-invite">
+        <span class="p-invite-title">Practise typing like ${esc(shared.name.split(' ')[0])}</span>
+        <span class="pf-invite-text">free Bangla (Bijoy) and English typing practice, made for job typing tests</span>
+        <button id="p-start" class="btn primary">${icon('keyboard', 15)}start typing</button>
+      </footer>` : `<footer class="pf-foot h-foot">
+        <span class="h-where">${icon(user ? 'cloud' : 'device', 14)}${user ? `Saved to your account (${esc(user.email || user.name)}), on every device you sign in on.` : 'Saved only in this browser. Sign in to keep your history on every device.'}</span>
+        ${all.length ? `<button id="h-clear" class="h-clear">${icon('trash', 14)}clear all history</button>` : ''}
+      </footer>`}
+    </div>`;
   return list;
 }

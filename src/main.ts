@@ -901,6 +901,7 @@ function drawProfile(animateChart = false) {
 
 /** Open a result from the progress chart: show enough rows to include it, then open it. */
 function openResult(list: Entry[], id: string) {
+  profileView.tab = 'results';
   const fromNewest = list.length - 1 - list.findIndex(e => e.id === id);
   if (fromNewest >= profileView.shown) profileView.shown = Math.ceil((fromNewest + 1) / 25) * 25;
   profileView.open = null;
@@ -1027,6 +1028,14 @@ profileEl.addEventListener('keydown', e => {
 profileEl.addEventListener('click', e => {
   const row = (e.target as HTMLElement).closest<HTMLElement>('.h-row');
   if (row) { toggleResult(row.dataset.id!); return; }
+  const ptab = (e.target as HTMLElement).closest<HTMLElement>('[data-ptab]');
+  if (ptab) {
+    profileView.tab = ptab.dataset.ptab as ProfileView['tab'];
+    drawProfile(profileView.tab === 'progress');
+    const panel = profileEl.querySelector('.pf-panel');
+    panel?.classList.remove('enter'); void (panel as HTMLElement | null)?.offsetWidth; panel?.classList.add('enter');
+    return;
+  }
   const b = (e.target as HTMLElement).closest('button');
   if (!b) return;
   if (b.dataset.dev) {
