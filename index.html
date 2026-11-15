@@ -6,6 +6,10 @@
     <title>Jolpai Type</title>
     <meta name="description" content="Bangla (Bijoy) and English typing practice for job typing tests." />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      // apply the saved theme before first paint
+      try { var t = localStorage.getItem('jolpai-type:theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lexend+Deca:wght@400;600&family=Noto+Sans+Bengali:wght@400;500&display=swap" rel="stylesheet" />
@@ -13,10 +17,18 @@
   <body>
     <div id="app">
       <header class="top">
-        <a class="brand" href="/" aria-label="Jolpai Type home">
+        <a class="brand" href="./" aria-label="Jolpai Type home">
           <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="16" cy="18" rx="9" ry="11" fill="currentColor"/><path d="M16 7c2-4 6-5 9-4-1 4-5 6-9 4z" fill="var(--sub)"/></svg>
           <span class="brand-text"><span class="brand-sub">জলপাই</span>jolpai type</span>
         </a>
+        <nav class="nav" aria-label="Main">
+          <button id="nav-test" title="Typing test (Esc)" aria-label="Typing test">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M20 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zM5 8h2v2H5V8zm0 3h2v2H5v-2zm11 5H8v-2h8v2zm0-3h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
+          </button>
+          <button id="nav-history" title="Your history and personal bests" aria-label="History">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M4 19h16v2H2V3h2v16zm3-2V10h3v7H7zm5 0V6h3v11h-3zm5 0v-4h3v4h-3z"/></svg>
+          </button>
+        </nav>
       </header>
 
       <main>
@@ -57,7 +69,7 @@
 
         <section id="result" class="result" hidden>
           <div class="stats-main">
-            <div><div class="label">wpm</div><div class="big" id="r-wpm">0</div></div>
+            <div><div class="label">wpm</div><div class="big" id="r-wpm">0</div><div id="r-pb" class="pb" hidden></div></div>
             <div><div class="label">acc</div><div class="big" id="r-acc">0%</div></div>
           </div>
           <div class="chart-wrap"><svg id="chart" class="chart" preserveAspectRatio="none"></svg></div>
@@ -73,10 +85,12 @@
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M9 6l6 6-6 6-1.4-1.4L12.2 12 7.6 7.4z"/></svg>
           </button>
         </section>
+        <section id="history" class="history" hidden aria-label="History"></section>
       </main>
 
       <footer class="bottom">
         <div class="keys"><kbd>tab</kbd> + <kbd>enter</kbd> restart <span class="dot">·</span> <kbd>esc</kbd> restart</div>
+        <div id="themes" class="themes" role="group" aria-label="Colour theme"></div>
         <div class="mobile-note">Jolpai Type works best on a computer with a keyboard. On your phone, try Jolpai Keyboard.</div>
       </footer>
     </div>

@@ -5,6 +5,8 @@ import { BANGLA_WORDS } from './words-bn';
 import { bijoyToUnicode, unicodeToSegments, usKey } from './bijoy';
 import { Keyboard } from './keyboard';
 import { lessonItems, lessonsFor } from './lessons';
+import { addEntry, clearHistory, renderHistory } from './history';
+import { renderThemePicker } from './themes';
 
 type Mode = 'time' | 'words' | 'passage' | 'lesson';
 type Lang = 'english' | 'bangla';
@@ -305,6 +307,7 @@ inputEl.addEventListener('blur', () => wrapEl.classList.add('blurred'));
 let tabArmed = false;
 
 document.addEventListener('keydown', e => {
+  if (!historyEl.hidden) { if (e.key === 'Escape') showHistory(false); return; }
   if (e.key === 'Tab') { e.preventDefault(); tabArmed = true; $('restart').focus(); return; }
   if (e.key === 'Enter' && tabArmed) { e.preventDefault(); tabArmed = false; reset(); return; }
   tabArmed = false;
@@ -477,8 +480,39 @@ function finish() {
   const acc = keyTotal ? (keyCorrect / keyTotal) * 100 : 0;
   if (samples.length) samples[samples.length - 1].wpm = wpm;
   showResult({ wpm, raw, acc, sec, c });
+
+  // net speed: gross minus wrong words per minute
+  let attempted = 0, wrong = 0;
+  for (let i = 0; i < current; i++) {
+    if (!typed[i]) continue;
+    attempted++;
+    if (!isCorrect(i)) wrong++;
+  }
+  const net = sec > 0 ? Math.max(0, raw - wrong / (sec / 60)) : 0;
   if (settings.mode === 'lesson') $('exam').innerHTML = ''; // lessons are practice, not an exam
-  else showExam(raw, sec);
+  else showExam(raw, net, attempted, wrong);
+
+  // save it, unless it was too short to mean anything
+  const pb = $('r-pb');
+  pb.hidden = true;
+  if (sec >= 5 && c.correct > 0) {
+    const { previousBest } = addEntry({
+      t: Date.now(), lang: settings.lang, mode: settings.mode, amount: settings.amount, label: testLabel(),
+      wpm: round1(wpm), net: round1(net), raw: round1(raw), acc: round1(acc), sec: round1(sec),
+    });
+    if (previousBest !== null && Math.round(wpm) > Math.round(previousBest)) {
+      pb.textContent = `new personal best · was ${Math.round(previousBest)}`;
+      pb.hidden = false;
+    }
+  }
+}
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+function testLabel() {
+  const amount = settings.mode === 'passage' ? `${settings.amount / 60}m`
+    : settings.mode === 'lesson' ? lessonsFor(settings.lang)[settings.amount].name : settings.amount;
+  return `${settings.mode} ${amount}`;
 }
 
 // ---------- exam check ----------
@@ -490,15 +524,7 @@ const POSTS = [
   { name: 'Computer Operator', bangla: 25, english: 30 },
 ];
 
-function showExam(gross: number, sec: number) {
-  let attempted = 0, wrong = 0;
-  for (let i = 0; i < current; i++) {
-    if (!typed[i]) continue;
-    attempted++;
-    if (!isCorrect(i)) wrong++;
-  }
-  const min = sec / 60;
-  const net = min > 0 ? Math.max(0, gross - wrong / min) : 0;
+function showExam(gross: number, net: number, attempted: number, wrong: number) {
   const lang = settings.lang;
   const rows = POSTS.map(p => {
     const need = p[lang];
@@ -535,9 +561,7 @@ function showResult(r: { wpm: number; raw: number; acc: number; sec: number; c: 
   $('r-chars').textContent = `${r.c.correct}/${r.c.incorrect}/${r.c.extra}/${timed() ? 0 : r.c.missed}`;
   $('r-cons').textContent = `${Math.round(consistency(samples.map(s => s.raw)))}%`;
   $('r-time').textContent = `${Math.round(r.sec)}s`;
-  const amount = settings.mode === 'passage' ? `${settings.amount / 60}m`
-    : settings.mode === 'lesson' ? lessonsFor(settings.lang)[settings.amount].name : settings.amount;
-  $('r-type').innerHTML = `${settings.mode} ${amount}<br>${settings.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english'}`;
+  $('r-type').innerHTML = `${testLabel()}<br>${settings.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english'}`;
   drawChart();
   $('next').focus();
 }
@@ -572,9 +596,46 @@ function drawChart() {
   svg.innerHTML = `${g}<path d="${line('raw')}" class="raw"/><path d="${line('wpm')}" class="wpm"/>${errs}`;
 }
 
+// ---------- history page ----------
+const historyEl = $('history');
+let historyLang: 'english' | 'bangla' = settings.lang;
+
+function showHistory(open: boolean) {
+  historyEl.hidden = !open;
+  configEl.hidden = open;
+  $('nav-history').classList.toggle('active', open);
+  if (open) {
+    clearInterval(tick);
+    testEl.hidden = true;
+    resultEl.hidden = true;
+    historyLang = settings.lang;
+    renderHistory(historyEl, historyLang);
+  } else {
+    reset();
+  }
+}
+
+$('nav-history').addEventListener('click', () => showHistory(historyEl.hidden));
+$('nav-test').addEventListener('click', () => { if (!historyEl.hidden) showHistory(false); else reset(); });
+historyEl.addEventListener('click', e => {
+  const b = (e.target as HTMLElement).closest('button');
+  if (!b) return;
+  if (b.dataset.hlang) {
+    historyLang = b.dataset.hlang as 'english' | 'bangla';
+    renderHistory(historyEl, historyLang);
+  } else if (b.id === 'h-clear' && confirm('Delete all saved test results from this browser? This cannot be undone.')) {
+    clearHistory();
+    renderHistory(historyEl, historyLang);
+  }
+});
+
 $('restart').addEventListener('click', reset);
 $('next').addEventListener('click', reset);
 window.addEventListener('resize', () => { if (!finished) updateCaret(); else drawChart(); });
 
+renderThemePicker($('themes'), () => {
+  if (!historyEl.hidden) renderHistory(historyEl, historyLang);
+  focusInput();
+});
 renderConfig();
 reset();
