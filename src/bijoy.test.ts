@@ -61,3 +61,12 @@ describe('unicodeToSegments', () => {
     expect(unmapped).toEqual([]);
   });
 });
+
+describe('Bangla passages', () => {
+  it('every passage word round-trips and uses only keyboard keys', async () => {
+    const { BANGLA_PASSAGES } = await import('./passages');
+    const words = BANGLA_PASSAGES.flatMap(p => p.split(/\s+/));
+    const bad = words.filter(w => bijoyToUnicode(keysOf(w)) !== w.normalize('NFC') || /[^\x21-\x7e]/.test(keysOf(w)));
+    expect(bad).toEqual([]);
+  });
+});

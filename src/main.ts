@@ -1,14 +1,16 @@
 import './style.css';
 import { randomWords } from './words';
+import { BANGLA_PASSAGES, ENGLISH_PASSAGES } from './passages';
 import { BANGLA_WORDS } from './words-bn';
 import { bijoyToUnicode, unicodeToSegments, usKey } from './bijoy';
 
-type Mode = 'time' | 'words';
+type Mode = 'time' | 'words' | 'passage';
 type Lang = 'english' | 'bangla';
 
 const AMOUNTS: Record<Mode, number[]> = {
   time: [15, 30, 60, 120, 300, 600],
   words: [10, 25, 50, 100],
+  passage: [60, 120, 300, 600],
 };
 
 const SETTINGS_KEY = 'jolpai-type:settings';
@@ -18,7 +20,7 @@ interface Settings { lang: Lang; mode: Mode; amount: number }
 function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '');
-    if ((s.mode === 'time' || s.mode === 'words') && AMOUNTS[s.mode as Mode].includes(s.amount)) {
+    if (s.mode in AMOUNTS && AMOUNTS[s.mode as Mode].includes(s.amount)) {
       return { lang: s.lang === 'bangla' ? 'bangla' : 'english', mode: s.mode, amount: s.amount };
     }
   } catch { /* first visit or storage blocked */ }
@@ -64,6 +66,18 @@ function makeWord(text: string): Word {
   return { text: text.normalize('NFC'), keys, segs };
 }
 
+let lastPassage = -1;
+function pickPassage(): Word[] {
+  const list = settings.lang === 'bangla' ? BANGLA_PASSAGES : ENGLISH_PASSAGES;
+  let i = Math.floor(Math.random() * list.length);
+  if (i === lastPassage) i = (i + 1) % list.length;
+  lastPassage = i;
+  return list[i].split(/\s+/).map(makeWord);
+}
+
+/** Time and passage tests run against the clock. */
+const timed = () => settings.mode !== 'words';
+
 function pickWords(n: number): Word[] {
   return randomWords(n, settings.lang === 'bangla' ? BANGLA_WORDS : undefined).map(makeWord);
 }
@@ -104,7 +118,7 @@ function renderConfig() {
   amountsEl.innerHTML = '';
   for (const n of AMOUNTS[settings.mode]) {
     const b = document.createElement('button');
-    b.textContent = settings.mode === 'time' && n >= 300 ? `${n / 60}m` : String(n);
+    b.textContent = (settings.mode === 'passage' || (settings.mode === 'time' && n >= 300)) ? `${n / 60}m` : String(n);
     b.dataset.amount = String(n);
     b.classList.toggle('active', n === settings.amount);
     amountsEl.appendChild(b);
@@ -123,7 +137,7 @@ configEl.addEventListener('click', e => {
     const mode = b.dataset.mode as Mode;
     if (mode !== settings.mode) {
       settings.mode = mode;
-      settings.amount = mode === 'time' ? 30 : 25;
+      settings.amount = { time: 30, words: 25, passage: 60 }[mode];
     }
   } else if (b.dataset.amount) {
     settings.amount = Number(b.dataset.amount);
@@ -135,7 +149,7 @@ configEl.addEventListener('click', e => {
 
 function reset() {
   clearInterval(tick);
-  words = pickWords(settings.mode === 'words' ? settings.amount : 100);
+  words = settings.mode === 'passage' ? pickPassage() : pickWords(settings.mode === 'words' ? settings.amount : 100);
   typed = words.map(() => '');
   current = 0;
   started = finished = false;
@@ -301,7 +315,7 @@ function typeChar(ch: string) {
   updateCaret();
 
   // words mode: finish as soon as the last word is typed correctly
-  if (settings.mode === 'words' && current === words.length - 1 && typed[current] === want) finish();
+  if (settings.mode !== 'time' && current === words.length - 1 && typed[current] === want) finish();
 }
 
 function space() {
@@ -385,12 +399,12 @@ function onSecond() {
   const c = counts(true);
   samples.push({ wpm: wpmFrom(c.correctWordChars, sec), raw: wpmFrom(secKeys, 1), errors: secErrors });
   secKeys = secErrors = 0;
-  if (settings.mode === 'time' && sec >= settings.amount - 0.05) finish();
+  if (timed() && sec >= settings.amount - 0.05) finish();
   else updateLive();
 }
 
 function updateLive() {
-  if (settings.mode === 'time') {
+  if (timed()) {
     liveEl.textContent = String(started ? Math.max(0, Math.round(settings.amount - elapsedSec())) : settings.amount);
   } else {
     liveEl.textContent = `${current}/${settings.amount}`;
@@ -401,11 +415,11 @@ function finish() {
   if (finished) return;
   finished = true;
   clearInterval(tick);
-  const sec = settings.mode === 'time' ? Math.min(elapsedSec(), settings.amount) : elapsedSec();
+  const sec = timed() ? Math.min(elapsedSec(), settings.amount) : elapsedSec();
   if (secKeys > 0 && sec - samples.length > 0.2) {
     samples.push({ wpm: 0, raw: wpmFrom(secKeys, sec - samples.length), errors: secErrors });
   }
-  const lastDone = settings.mode === 'words' && current === words.length - 1;
+  const lastDone = settings.mode !== 'time' && current === words.length - 1;
   current = Math.min(current + 1, words.length); // count the word in progress
   const c = counts(false);
   if (lastDone) c.correctWordChars = Math.max(0, c.correctWordChars - 1); // no space after the last word
@@ -414,6 +428,42 @@ function finish() {
   const acc = keyTotal ? (keyCorrect / keyTotal) * 100 : 0;
   if (samples.length) samples[samples.length - 1].wpm = wpm;
   showResult({ wpm, raw, acc, sec, c });
+  showExam(raw, sec);
+}
+
+// ---------- exam check ----------
+// Minimum speeds from recent Bangladesh government job circulars.
+// The circulars do not say how a word is counted; Jolpai Type uses the
+// common 5-keystroke word and the usual net-speed formula.
+const POSTS = [
+  { name: 'Office Assistant-cum-Computer Typist', bangla: 20, english: 20 },
+  { name: 'Computer Operator', bangla: 25, english: 30 },
+];
+
+function showExam(gross: number, sec: number) {
+  let attempted = 0, wrong = 0;
+  for (let i = 0; i < current; i++) {
+    if (!typed[i]) continue;
+    attempted++;
+    if (!isCorrect(i)) wrong++;
+  }
+  const min = sec / 60;
+  const net = min > 0 ? Math.max(0, gross - wrong / min) : 0;
+  const lang = settings.lang;
+  const rows = POSTS.map(p => {
+    const need = p[lang];
+    const ok = net >= need;
+    return `<li class="${ok ? 'pass' : 'fail'}"><span class="mark">${ok ? '✓' : '✗'}</span>${p.name}<span class="need">needs ${need} wpm</span></li>`;
+  }).join('');
+  $('exam').innerHTML = `
+    <div class="exam-nums">
+      <div><div class="label">net speed</div><div class="val">${Math.round(net)} <small>wpm</small></div></div>
+      <div><div class="label">gross speed</div><div class="val">${Math.round(gross)} <small>wpm</small></div></div>
+      <div><div class="label">words typed</div><div class="val">${attempted}</div></div>
+      <div><div class="label">wrong words</div><div class="val">${wrong}</div></div>
+    </div>
+    <ul class="posts">${rows}</ul>
+    <p class="exam-note">Minimum ${lang === 'bangla' ? 'Bangla' : 'English'} speeds from recent government job circulars. Net speed = gross speed minus wrong words per minute, with 5 keystrokes counted as one word. Check your own circular, since boards can count differently.</p>`;
 }
 
 function consistency(values: number[]) {
@@ -432,10 +482,11 @@ function showResult(r: { wpm: number; raw: number; acc: number; sec: number; c: 
   $('r-wpm').textContent = String(Math.round(r.wpm));
   $('r-acc').textContent = `${Math.round(r.acc)}%`;
   $('r-raw').textContent = String(Math.round(r.raw));
-  $('r-chars').textContent = `${r.c.correct}/${r.c.incorrect}/${r.c.extra}/${settings.mode === 'time' ? 0 : r.c.missed}`;
+  $('r-chars').textContent = `${r.c.correct}/${r.c.incorrect}/${r.c.extra}/${timed() ? 0 : r.c.missed}`;
   $('r-cons').textContent = `${Math.round(consistency(samples.map(s => s.raw)))}%`;
   $('r-time').textContent = `${Math.round(r.sec)}s`;
-  $('r-type').innerHTML = `${settings.mode} ${settings.amount}<br>${settings.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english'}`;
+  const amount = settings.mode === 'passage' ? `${settings.amount / 60}m` : settings.amount;
+  $('r-type').innerHTML = `${settings.mode} ${amount}<br>${settings.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english'}`;
   drawChart();
   $('next').focus();
 }

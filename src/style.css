@@ -128,6 +128,18 @@ body.typing .live, .live:not(:empty) { opacity: 1; }
 .stats-sub .label { font-size: 15px; }
 .val { color: var(--main); font-family: var(--font-mono); font-size: 26px; line-height: 1.2; }
 #r-type { font-size: 15px; }
+.exam { grid-column: 1 / -1; background: var(--sub-alt); border-radius: 10px; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.exam:empty { display: none; }
+.exam-nums { display: flex; flex-wrap: wrap; gap: 12px 40px; }
+.exam-nums .label { font-size: 15px; }
+.exam .val small { font-size: 14px; color: var(--sub); }
+.posts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.posts li { display: flex; align-items: center; gap: 10px; }
+.posts .mark { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+.posts .pass .mark { background: var(--main); color: var(--bg); }
+.posts .fail .mark { background: var(--error); color: var(--bg); }
+.posts .need { color: var(--sub); font-size: 13px; margin-left: auto; }
+.exam-note { margin: 0; color: var(--sub); font-size: 12px; line-height: 1.5; }
 .result .restart { grid-column: 1 / -1; justify-self: center; }
 
 /* footer */
