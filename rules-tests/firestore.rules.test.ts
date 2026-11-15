@@ -48,11 +48,12 @@ describe('results', () => {
 
   it('accepts the optional detail fields, within limits', async () => {
     const db = env.authenticatedContext('alice').firestore();
-    const detail = { chars: [120, 3, 1, 0], cons: 88.5, words: 25, wrong: 1, hw: [60, 70, 72], hr: [62, 75, 74], he: [0, 1, 0] };
+    const detail = { chars: [120, 3, 1, 0], cons: 88.5, words: 25, wrong: 1, hw: [60, 70, 72], hr: [62, 75, 74], he: [0, 1, 0], dev: 'mobile' };
     await assertSucceeds(setDoc(doc(db, 'users/alice/results/r1'), result('r1', detail)));
     await assertFails(setDoc(doc(db, 'users/alice/results/r2'), result('r2', { cons: 150 })));
     await assertFails(setDoc(doc(db, 'users/alice/results/r3'), result('r3', { chars: [1, 2, 3, 4, 5] })));
     await assertFails(setDoc(doc(db, 'users/alice/results/r4'), result('r4', { hw: 'fast' })));
+    await assertFails(setDoc(doc(db, 'users/alice/results/r6'), result('r6', { dev: 'watch' })));
     await assertFails(setDoc(doc(db, 'users/alice/results/r5'), result('r5', { hw: Array(701).fill(1) })));
   });
 

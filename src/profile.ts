@@ -2,10 +2,11 @@
 import { loadHistory, type Entry, type Lang } from './history';
 import { icon, type IconName } from './icons';
 import { POSTS } from './exam';
+import { DEVICE_NAME, deviceOf, type Device } from './device';
 
 export interface ProfileUser { name: string; email: string; photo: string | null; joined: number | null }
 export type ResultFilter = 'all' | 'time' | 'words' | 'passage' | 'lesson';
-export interface ProfileView { lang: Lang; filter: ResultFilter; shown: number; open: string | null }
+export interface ProfileView { lang: Lang; filter: ResultFilter; shown: number; open: string | null; dev: Device }
 
 /** Someone's shared profile, shown read-only. */
 export interface SharedData {
@@ -41,13 +42,15 @@ export function streak(list: Entry[], now = new Date()): number {
   return n;
 }
 
-function profileCard(all: Entry[], user: ProfileUser | null, opts: ProfileOptions) {
+function profileCard(all: Entry[], everything: Entry[], user: ProfileUser | null, opts: ProfileOptions) {
   const shared = opts.shared;
   if (shared) user = { name: shared.name, email: '', photo: shared.photo, joined: shared.joined };
-  const first = all.length ? Math.min(...all.map(e => e.t)) : null;
+  const first = everything.length ? Math.min(...everything.map(e => e.t)) : null;
   const since = user?.joined ? `joined ${fmtDay(user.joined)}` : first ? `typing since ${fmtDay(first)}` : 'no tests yet';
-  const tests = shared ? shared.tests : all.length;
-  const time = shared ? shared.time : all.reduce((a, e) => a + e.sec, 0);
+  // a shared copy holds only recent results; its saved totals are exact when one device has them all
+  const oneDevice = all.length === everything.length;
+  const tests = shared && oneDevice ? shared.tests : all.length;
+  const time = shared && oneDevice ? shared.time : all.reduce((a, e) => a + e.sec, 0);
   const sync = shared
     ? `${icon('globe', 13)}shared profile${shared.updated ? ` · updated ${fmtDate(shared.updated)}` : ''}`
     : user ? `${icon('cloud', 13)}saved to your account${opts.sharing ? ` · ${icon('share', 13)}shared` : ''}`
@@ -199,12 +202,11 @@ function detail(e: Entry, all: Entry[], shared = false) {
     return `<li class="${ok ? 'pass' : 'fail'}"><span class="mark">${icon(ok ? 'check' : 'x', 14)}</span>${p.name}<span class="need">needs ${need} net wpm</span></li>`;
   }).join('')}</ul>`;
   const graph = e.hw && e.hw.length
-    ? `<div class="d-chart-wrap"><svg class="chart d-chart" data-id="${esc(e.id)}" preserveAspectRatio="none" role="img" aria-label="Speed during this test"></svg></div>
-       <div class="h-legend"><span><i class="line-key"></i>wpm</span><span><i class="line-key raw-key"></i>raw</span><span><i class="err-key">×</i>mistakes</span></div>`
+    ? `<div class="d-chart-wrap" data-id="${esc(e.id)}"></div>`
     : shared ? '' : `<p class="d-note">${icon('info', 14)}The speed graph and character counts are saved for tests taken from now on.</p>`;
   return `<div class="d-box">
       <div class="d-head">
-        <div><div class="d-title">${esc(e.label)} · ${e.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english'}</div><div class="d-when">${esc(when)}</div></div>
+        <div><div class="d-title">${esc(e.label)} · ${e.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english'}</div><div class="d-when">${esc(when)} · ${icon(deviceOf(e) === 'mobile' ? 'phone' : 'device', 13)}${DEVICE_NAME[deviceOf(e)]}</div></div>
         ${isPb ? `<span class="pb">${icon('trophy', 14)}personal best</span>` : ''}
       </div>
       <div class="d-stats">${cells}</div>
@@ -217,40 +219,47 @@ const FILTERS: [ResultFilter, string][] = [['all', 'all'], ['time', 'time'], ['w
 
 export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileUser | null, opts: ProfileOptions = {}) {
   const shared = opts.shared;
-  const all = shared ? shared.results : loadHistory();
+  const everything = shared ? shared.results : loadHistory();
+  const perDevice = { desktop: 0, mobile: 0 };
+  for (const e of everything) perDevice[deviceOf(e)]++;
+  // computer and mobile results are kept apart: everything below follows the device switch
+  const all = everything.filter(e => deviceOf(e) === view.dev);
   const inLang = all.filter(e => e.lang === view.lang);
   const list = view.filter === 'all' ? inLang : inLang.filter(e => e.mode === view.filter);
   const rows = list.slice(-view.shown).reverse().map(e => {
     const open = view.open === e.id;
     return `<tr class="h-row ${open ? 'open' : ''}" data-id="${esc(e.id)}" tabindex="0" aria-expanded="${open}" title="Show the details of this test">`
-      + `<td>${icon('next', 13, 'h-chev')}${fmtDate(e.t)}</td><td>${esc(e.label)}</td><td class="num">${r0(e.wpm)}</td><td class="num">${r0(e.raw)}</td><td class="num">${e.mode === 'lesson' ? '–' : r0(e.net)}</td><td class="num">${r0(e.acc)}%</td><td class="num">${fmtDuration(e.sec)}</td></tr>`
+      + `<td>${icon('next', 13, 'h-chev')}${fmtDate(e.t)}</td><td>${esc(e.label)}</td><td class="num">${r0(e.wpm)}</td><td class="num opt">${r0(e.raw)}</td><td class="num opt">${e.mode === 'lesson' ? '–' : r0(e.net)}</td><td class="num">${r0(e.acc)}%</td><td class="num opt">${fmtDuration(e.sec)}</td></tr>`
       + (open ? `<tr class="h-detail"><td colspan="7">${detail(e, all, !!shared)}</td></tr>` : '');
   }).join('');
 
   el.innerHTML = `
-    ${profileCard(all, user, opts)}
-    <div class="h-head">
-      <h2>${icon('trophy', 15)}personal bests</h2>
-      <div class="group seg h-lang">
+    ${profileCard(all, everything, user, opts)}
+    <div class="p-filters">
+      <div class="group seg p-dev" role="group" aria-label="Device">
+        ${(['desktop', 'mobile'] as Device[]).map(d => `<button data-dev="${d}" class="${view.dev === d ? 'active' : ''}" title="Results typed on ${d === 'mobile' ? 'a phone or tablet' : 'a computer'}">${icon(d === 'mobile' ? 'phone' : 'device', 15)}${DEVICE_NAME[d]}<span class="cnt">${perDevice[d]}</span></button>`).join('')}
+      </div>
+      <div class="group seg h-lang" role="group" aria-label="Language">
         <button data-hlang="bangla" class="${view.lang === 'bangla' ? 'active' : ''}">বাংলা (বিজয়)</button>
         <button data-hlang="english" class="${view.lang === 'english' ? 'active' : ''}">english</button>
       </div>
     </div>
+    <h2>${icon('trophy', 15)}personal bests <span class="h2-sub">· ${DEVICE_NAME[view.dev]}</span></h2>
     ${pbSection(inLang)}
-    <h2>${icon('calendar', 15)}activity</h2>
+    <h2>${icon('calendar', 15)}activity <span class="h2-sub">· ${DEVICE_NAME[view.dev]}</span></h2>
     ${activity(all)}
     <div class="h-head">
       <h2>${icon('zap', 15)}stats</h2>
       <div class="group seg h-filter">${FILTERS.map(([f, label]) => `<button data-filter="${f}" class="${view.filter === f ? 'active' : ''}">${label}</button>`).join('')}</div>
     </div>
     ${list.length === 0
-      ? `<div class="h-empty-box">${icon('chart', 32)}<p class="h-empty">No ${view.filter === 'all' ? '' : `${FILTERS.find(f => f[0] === view.filter)![1]} `}tests yet in this language.${shared ? '' : ' Finish one and it will show up here.'}</p></div>`
+      ? `<div class="h-empty-box">${icon('chart', 32)}<p class="h-empty">No ${view.filter === 'all' ? '' : `${FILTERS.find(f => f[0] === view.filter)![1]} `}tests yet in this language on ${view.dev === 'mobile' ? 'a phone or tablet' : 'a computer'}.${shared ? '' : ' Finish one and it will show up here.'}</p></div>`
       : `${statsGrid(list)}
     <h2>${icon('trend', 15)}progress</h2>
     ${progressChart(list)}
     <h2>${icon('clock', 15)}results</h2>
     <div class="h-table-wrap"><table class="h-table">
-      <thead><tr><th>date</th><th>test</th><th class="num">wpm</th><th class="num">raw</th><th class="num">net</th><th class="num">acc</th><th class="num">time</th></tr></thead>
+      <thead><tr><th>date</th><th>test</th><th class="num">wpm</th><th class="num opt">raw</th><th class="num opt">net</th><th class="num">acc</th><th class="num opt">time</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
     ${list.length > view.shown ? `<button id="h-more" class="btn more">show ${Math.min(25, list.length - view.shown)} more · ${list.length - view.shown} left</button>` : ''}`}

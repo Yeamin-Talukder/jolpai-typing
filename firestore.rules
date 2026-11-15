@@ -47,7 +47,7 @@ service cloud.firestore {
 
     function validResult(d, id) {
       return d.keys().hasOnly(['id', 't', 'lang', 'mode', 'amount', 'label', 'wpm', 'net', 'raw', 'acc', 'sec',
-                               'chars', 'cons', 'words', 'wrong', 'hw', 'hr', 'he'])
+                               'chars', 'cons', 'words', 'wrong', 'hw', 'hr', 'he', 'dev'])
         && d.keys().hasAll(['id', 't', 'lang', 'mode', 'amount', 'label', 'wpm', 'net', 'raw', 'acc', 'sec'])
         && d.id == id
         && d.t is int
@@ -62,7 +62,8 @@ service cloud.firestore {
         && optNum(d, 'cons', 0, 100)
         && optNum(d, 'words', 0, 100000)
         && optNum(d, 'wrong', 0, 100000)
-        && optList(d, 'hw', 700) && optList(d, 'hr', 700) && optList(d, 'he', 700);
+        && optList(d, 'hw', 700) && optList(d, 'hr', 700) && optList(d, 'he', 700)
+        && (!('dev' in d) || d.dev in ['desktop', 'mobile']);
     }
 
     match /users/{uid} {

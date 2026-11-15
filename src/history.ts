@@ -1,6 +1,7 @@
 // Test history. It is always kept in this browser's local storage; when
 // someone is signed in, account.ts also keeps a copy in their account and
 // merges the two.
+import { deviceOf, type Device } from './device';
 
 export type Lang = 'english' | 'bangla';
 
@@ -24,6 +25,7 @@ export interface Entry {
   hw?: number[];      // speed each second
   hr?: number[];      // raw speed each second
   he?: number[];      // mistakes each second
+  dev?: Device;       // typed on a computer or a phone/tablet (missing: computer)
 }
 
 const KEEP_GRAPHS = 200; // per-second graphs kept in the browser for the newest results only
@@ -63,8 +65,9 @@ function save(list: Entry[]) {
   try { localStorage.setItem(KEY, JSON.stringify(kept)); } catch { /* storage full or blocked */ }
 }
 
-const sameTest = (a: Entry, b: Pick<Entry, 'lang' | 'mode' | 'amount'>) =>
-  a.lang === b.lang && a.mode === b.mode && a.amount === b.amount;
+// personal bests are per device too: a phone score never competes with a computer one
+const sameTest = (a: Entry, b: Entry) =>
+  a.lang === b.lang && a.mode === b.mode && a.amount === b.amount && deviceOf(a) === deviceOf(b);
 
 /** Store a result. Returns the previous best for the same test, if any. */
 export function addEntry(e: Entry): { previousBest: number | null } {

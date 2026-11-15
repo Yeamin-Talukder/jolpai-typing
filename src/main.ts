@@ -11,8 +11,9 @@ import { FONT_PX, DEFAULT_PREFS, loadPrefs, savePrefs } from './prefs';
 import { keySound, previewSound } from './sound';
 import { ON_OFF, onOff, renderSettings, type Section } from './settings-page';
 import { Replay, type KeyEvent } from './replay';
-import { speedChart } from './chart';
+import { renderSpeedChart } from './chart';
 import { addExtras } from './extras';
+import { deviceKind, deviceOf, type Device } from './device';
 import { POSTS } from './exam';
 import { accountsEnabled, clearAccountHistory, currentShareId, currentUser, initAccount, loadShared, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
 import { SharePanel } from './share';
@@ -84,6 +85,7 @@ function applyPrefs() {
   wrapEl.classList.toggle('blind', prefs.blind);
   caretEl.className = `caret ${prefs.caret}${prefs.smoothCaret ? ' smooth' : ''}`;
   document.body.classList.toggle('no-timer-bar', !prefs.timerBar);
+  document.body.classList.toggle('smooth-caret', prefs.smoothCaret);
   liveWpmEl.hidden = !prefs.liveSpeed;
   liveAccEl.hidden = !prefs.liveAcc;
   liveBurstEl.hidden = !prefs.liveBurst;
@@ -368,6 +370,22 @@ function nextKey(): string | null {
   return current === words.length - 1 ? null : 'space';
 }
 
+// The caret moves sideways with a transform and up or down with `top`, so
+// each has its own timing: a steady glide from letter to letter, and a line
+// change in step with the words scrolling up.
+function placeCaret(x: number, y: number) {
+  caretEl.style.transform = `translate3d(${x}px, 0, 0)`;
+  caretEl.style.top = `${y}px`;
+}
+
+// solid while you type, blinking again once you pause
+let caretIdle = 0;
+function caretTyping() {
+  caretEl.classList.remove('blink');
+  clearTimeout(caretIdle);
+  caretIdle = window.setTimeout(() => { if (!finished) caretEl.classList.add('blink'); }, 1000);
+}
+
 function updateCaret() {
   const wordEl = wordsEl.children[current] as HTMLElement | undefined;
   if (!wordEl) return;
@@ -399,17 +417,17 @@ function updateCaret() {
   if (prefs.caret === 'block') {
     caretEl.style.width = `${cw}px`;
     caretEl.style.height = `${h * 0.85}px`;
-    caretEl.style.transform = `translate(${x}px, ${y + h * 0.08}px)`;
+    placeCaret(x, y + h * 0.08);
   } else if (prefs.caret === 'underline') {
     caretEl.style.width = `${cw}px`;
     caretEl.style.height = '3px';
-    caretEl.style.transform = `translate(${x}px, ${y + h * 0.9}px)`;
+    placeCaret(x, y + h * 0.9);
   } else {
     caretEl.style.width = '';
     caretEl.style.height = `${h * 0.85}px`;
-    caretEl.style.transform = `translate(${x - 1}px, ${y + h * 0.08}px)`;
+    placeCaret(x - 1, y + h * 0.08);
   }
-  caretEl.classList.toggle('blink', !started);
+  if (started) caretTyping(); else caretEl.classList.add('blink');
   if (showKeyboard()) keyboard.hint(nextKey());
 }
 
@@ -648,6 +666,7 @@ function finish() {
   const raw = wpmFrom(c.allChars, sec);
   const acc = keyTotal ? (keyCorrect / keyTotal) * 100 : 0;
   if (samples.length) samples[samples.length - 1].wpm = wpm;
+  lastWpm = wpm;
   showResult({ wpm, raw, acc, sec, c });
   const testWords = words;
   replay.load(keyLog, testWords.length, settings.lang, (i, t) => wordHTMLFor(testWords[i], t));
@@ -675,6 +694,7 @@ function finish() {
       cons: round1(consistency(samples.map(x => x.raw))),
       words: attempted, wrong,
       hw: samples.map(x => Math.round(x.wpm)), hr: samples.map(x => Math.round(x.raw)), he: samples.map(x => x.errors),
+      dev: deviceKind(),
     };
     const { previousBest } = addEntry(entry);
     saveToAccount(entry);
@@ -696,6 +716,7 @@ function testLabel() {
 
 // ---------- exam check (minimums in exam.ts) ----------
 let lastExam: [number, number, number, number] | null = null; // the last result's numbers
+let lastWpm = 0; // the last result's speed, for the chart's average line
 
 /** Show or clear the exam check for the result on screen. */
 function drawExam() {
@@ -748,15 +769,9 @@ function showResult(r: { wpm: number; raw: number; acc: number; sec: number; c: 
 }
 
 function drawChart(animate = false) {
-  const svg = $('chart') as unknown as SVGSVGElement;
-  const W = svg.clientWidth || 800;
-  const H = svg.clientHeight || 200;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.innerHTML = speedChart(W, H, samples.map(s => s.wpm), samples.map(s => s.raw), samples.map(s => s.errors), 'result');
-  if (animate) {
-    drawIn(svg.querySelector<SVGPathElement>('.raw'));
-    drawIn(svg.querySelector<SVGPathElement>('.wpm'));
-  }
+  renderSpeedChart($('chart-wrap'), {
+    wpm: samples.map(s => s.wpm), raw: samples.map(s => s.raw), err: samples.map(s => s.errors), avg: lastWpm,
+  }, 'result', animate);
 }
 
 // ---------- pages: test, profile, settings ----------
@@ -764,7 +779,13 @@ type View = 'test' | 'profile' | 'settings' | 'shared';
 let view: View = 'test';
 const profileEl = $('history');
 const settingsEl = $('settings');
-const profileView: ProfileView = { lang: settings.lang, filter: 'all', shown: 25, open: null };
+const profileView: ProfileView = { lang: settings.lang, filter: 'all', shown: 25, open: null, dev: deviceKind() };
+
+/** Open the profile on this device's results, or the other device's if this one has none. */
+function pickDevice(list: Entry[], prefer: Device): Device {
+  const other: Device = prefer === 'mobile' ? 'desktop' : 'mobile';
+  return list.some(e => deviceOf(e) === prefer) || !list.some(e => deviceOf(e) === other) ? prefer : other;
+}
 let sharedData: SharedData | null = null; // someone's shared profile, when viewing one
 
 function profileUser() {
@@ -776,15 +797,13 @@ function drawProfile() {
   if (view === 'shared' && sharedData) renderProfile(profileEl, profileView, null, { shared: sharedData });
   else renderProfile(profileEl, profileView, profileUser(), { sharing: !!currentShareId() });
   movePills(profileEl);
+  // the activity calendar scrolls sideways on small screens: show the latest weeks
+  profileEl.querySelectorAll<HTMLElement>('.p-act-scroll').forEach(el => { el.scrollLeft = el.scrollWidth; });
   const results = view === 'shared' && sharedData ? sharedData.results : loadHistory();
   // draw the opened result's graph at its real size, so the text stays sharp
-  profileEl.querySelectorAll<SVGSVGElement>('.d-chart').forEach(svg => {
-    const e = results.find(x => x.id === svg.dataset.id);
-    if (!e?.hw) return;
-    const W = svg.clientWidth || 800, H = svg.clientHeight || 180;
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    svg.innerHTML = speedChart(W, H, e.hw, e.hr ?? e.hw, e.he ?? [], `d-${e.id}`);
-    drawIn(svg.querySelector<SVGPathElement>('.wpm'), 700);
+  profileEl.querySelectorAll<HTMLElement>('.d-chart-wrap').forEach(box => {
+    const e = results.find(x => x.id === box.dataset.id);
+    if (e?.hw) renderSpeedChart(box, { wpm: e.hw, raw: e.hr ?? [], err: e.he ?? [], avg: e.wpm }, `d-${e.id.replace(/[^a-z0-9]/gi, '')}`, true);
   });
 }
 
@@ -824,6 +843,7 @@ function showView(v: View) {
     profileView.lang = settings.lang;
     profileView.shown = 25;
     profileView.open = null;
+    profileView.dev = pickDevice(loadHistory(), deviceKind());
     drawProfile();
     enter(profileEl);
     drawIn(profileEl.querySelector<SVGPathElement>('.h-chart .wpm'), 1100);
@@ -854,6 +874,8 @@ async function openShared(id: string) {
   profileView.filter = 'all';
   profileView.shown = 25;
   profileView.open = null;
+  const phone = data.results.filter(e => deviceOf(e) === 'mobile').length;
+  profileView.dev = phone * 2 > data.results.length ? 'mobile' : 'desktop'; // where they type most
   drawProfile();
   enter(profileEl);
   drawIn(profileEl.querySelector<SVGPathElement>('.h-chart .wpm'), 1100);
@@ -881,7 +903,13 @@ profileEl.addEventListener('click', e => {
   if (row) { toggleResult(row.dataset.id!); return; }
   const b = (e.target as HTMLElement).closest('button');
   if (!b) return;
-  if (b.dataset.hlang) {
+  if (b.dataset.dev) {
+    profileView.dev = b.dataset.dev as Device;
+    profileView.shown = 25;
+    profileView.open = null;
+    drawProfile();
+    drawIn(profileEl.querySelector<SVGPathElement>('.h-chart .wpm'), 900);
+  } else if (b.dataset.hlang) {
     profileView.lang = b.dataset.hlang as Lang;
     drawProfile();
   } else if (b.dataset.filter) {

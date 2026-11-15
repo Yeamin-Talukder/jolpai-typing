@@ -19,6 +19,7 @@ export function cleanEntry(e: Entry): Entry {
   if (hw) out.hw = hw;
   if (hr) out.hr = hr;
   if (he) out.he = he;
+  if (e.dev === 'desktop' || e.dev === 'mobile') out.dev = e.dev;
   return out;
 }
 

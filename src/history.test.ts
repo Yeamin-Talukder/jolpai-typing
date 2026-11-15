@@ -35,7 +35,7 @@ describe('history', () => {
     addEntry(entry({ wpm: 31 }));
     addEntry(entry({ lang: 'english', wpm: 55 }));
     const el = document.createElement('div');
-    renderProfile(el, { lang: 'bangla', filter: 'all', shown: 25, open: null }, null);
+    renderProfile(el, { lang: 'bangla', filter: 'all', shown: 25, open: null, dev: 'desktop' }, null);
     // look only at the speed figures: dates and times can contain any digits
     const speeds = [...el.querySelectorAll('.val')].map(v => v.textContent).join(' ');
     expect(speeds).toContain('31');
@@ -49,6 +49,13 @@ describe('history', () => {
     expect(streak([at(0), at(1), at(2), at(4)], now)).toBe(3);
     expect(streak([at(1), at(2)], now)).toBe(2); // nothing today yet
     expect(streak([at(2), at(3)], now)).toBe(0);
+  });
+
+  it('keeps personal bests apart for phones and computers', () => {
+    addEntry(entry({ wpm: 50 }));                       // computer (no device recorded)
+    expect(addEntry(entry({ wpm: 30, dev: 'mobile' })).previousBest).toBeNull();
+    expect(addEntry(entry({ wpm: 40, dev: 'mobile' })).previousBest).toBe(30);
+    expect(addEntry(entry({ wpm: 45, dev: 'desktop' })).previousBest).toBe(50);
   });
 
   it('keeps per-second graphs only for the newest 200 results', () => {

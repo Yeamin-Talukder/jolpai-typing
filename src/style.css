@@ -183,7 +183,7 @@ body.typing .progress { opacity: 1; }
   cursor: text;
 }
 .words-wrap.enter { animation: rise .4s var(--ease); }
-.words { display: flex; flex-wrap: wrap; align-content: flex-start; line-height: 1.6em; transition: transform .2s var(--ease), filter var(--med), opacity var(--med); }
+.words { display: flex; flex-wrap: wrap; align-content: flex-start; line-height: 1.6em; transition: transform .15s ease-out, filter var(--med), opacity var(--med); will-change: transform; }
 .words-wrap.bn { font-family: 'Noto Sans Bengali', var(--font-mono); font-size: min(calc(var(--fs, 28px) + 2px), 7.5vw); }
 .words-wrap.bn .words { line-height: 1.75em; }
 .words-wrap.bn { height: calc(3 * 1.75em); }
@@ -203,7 +203,9 @@ body.typing .progress { opacity: 1; }
   box-shadow: 0 0 10px color-mix(in srgb, var(--caret) 55%, transparent);
   transition: filter var(--med), opacity var(--med);
 }
-.caret.smooth { transition: transform .1s var(--ease), width .1s var(--ease), height .1s, filter var(--med), opacity var(--med); }
+/* steady glide sideways; up and down in step with the words scrolling (.15s ease-out) */
+.caret { will-change: transform, top; }
+.caret.smooth { transition: transform 100ms linear, top .15s ease-out, width 100ms linear, height 100ms linear, filter var(--med), opacity var(--med); }
 .caret.block { background: color-mix(in srgb, var(--caret) 38%, transparent); box-shadow: none; border-radius: 4px; }
 .caret.underline { border-radius: 2px; }
 .caret.off { display: none; }
@@ -428,6 +430,9 @@ kbd {
     animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important;
     transition-duration: .01ms !important;
   }
+  /* the smooth caret is a typing setting someone chose, so it keeps its glide */
+  .caret.smooth { transition: transform 100ms linear, top .15s ease-out, width 100ms linear, height 100ms linear !important; }
+  body.smooth-caret .words { transition: transform .15s ease-out !important; }
 }
 
 /* ---------- result: next-test note and replay ---------- */
@@ -727,3 +732,231 @@ body.replay-expanded { overflow: hidden; }
 .theme-row.active .sw-dot { box-shadow: 0 0 0 2px var(--sub-alt), 0 0 0 3.5px var(--main); }
 .tr-name { flex: 1; white-space: nowrap; }
 .tr-bn { color: var(--sub); font: 12px 'Noto Sans Bengali', var(--font-ui); }
+
+/* =====================================================================
+   Phones and small tablets. Everything below 700px wide, plus a few
+   rules for touch screens. Placed last so it wins over the rules above.
+   ===================================================================== */
+
+/* the hidden typing box sits inside the test area, so phones do not jump
+   to it when their keyboard opens; 16px stops iOS zooming in */
+.test { position: relative; }
+.hidden-input { left: 0; top: 0; font-size: 16px; }
+
+/* the replay keyboard fits its box on any width */
+@media (max-width: 900px) {
+  .rp-kb { display: flex; width: 100%; gap: 4px; }
+  .rp-kb .kb-row { width: 100%; gap: 4px; justify-content: center; }
+  .rp-kb .kb-key { flex: 1 1 0; width: auto; min-width: 0; height: clamp(26px, 7.5vw, 46px); font-size: clamp(10px, 3.2vw, 16px); border-radius: 6px; }
+  .rp-kb .kb-key.wide { flex: 1.6 1 0; min-width: 0; padding: 0 2px; font-size: clamp(8px, 2.4vw, 11px); }
+  .rp-kb .kb-key.space { flex: none; width: 55%; }
+  .rp-kb .kb-key .en { display: none; }
+  .rp-kb .kb-key .hi { font-size: clamp(8px, 2.4vw, 12px); }
+  .rp-kb .kb-key.home::after { bottom: 3px; width: 8px; }
+  .replay:fullscreen .rp-kb .kb-key, .replay.expanded .rp-kb .kb-key { width: auto; height: clamp(30px, 9vw, 62px); font-size: clamp(11px, 3.6vw, 21px); }
+  .replay:fullscreen .rp-kb .kb-key.wide, .replay.expanded .rp-kb .kb-key.wide { min-width: 0; }
+  .replay:fullscreen .rp-kb .kb-key.space, .replay.expanded .rp-kb .kb-key.space { width: 55%; }
+}
+
+@media (max-width: 700px) {
+  #app { padding: 14px 14px 90px; gap: 18px; }
+  main { gap: 20px; justify-content: flex-start; }
+
+  /* header */
+  .top { gap: 8px; }
+  .nav { gap: 2px; }
+  .nav > button { width: 40px; height: 40px; }
+  .sign-in { padding: 8px 10px; }
+  .account { margin-right: 2px; }
+
+  /* settings bar: one full-width row per panel, choices share the width */
+  .config { flex-direction: column; align-items: stretch; width: 100%; gap: 8px; white-space: normal; }
+  .config > .group { padding: 4px; border-radius: 12px; }
+  .config > .group button { flex: 1 1 0; justify-content: center; padding: 9px 4px; min-height: 38px; font-size: 13.5px; }
+  .config > .group button .icon { display: none; }
+  #amounts { flex-wrap: wrap; }
+  #amounts button { flex: 1 0 auto; padding: 9px 8px; }
+
+  /* test */
+  .test { gap: 10px; }
+  .test-top { gap: 10px; height: 30px; }
+  .live { font-size: 22px; }
+  .live-stats { gap: 10px; font-size: 11px; }
+  .live-stats b { font-size: 16px; }
+  .lang-pick { font-size: 14px; padding: 6px 10px; }
+  .lang-hint { font-size: 11px; text-align: center; }
+  .restart { width: 52px; height: 52px; }
+  .restart[data-tip]::after { display: none; }
+
+  /* result */
+  .result { grid-template-columns: 1fr; gap: 16px; }
+  .stats-main { flex-direction: row; gap: 32px; }
+  .label { font-size: 15px; }
+  .big { font-size: 46px; }
+  .chart-wrap { height: 160px; }
+  .stats-sub { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .stats-sub .label { font-size: 13px; }
+  .val { font-size: 21px; }
+  #r-type { font-size: 13px; }
+  .exam { padding: 14px; }
+  .exam-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .posts li { flex-wrap: wrap; font-size: 14px; }
+  .posts .need { margin-left: 32px; width: 100%; }
+  .result-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .result-actions .btn { justify-content: center; padding: 12px 10px; }
+  .replay { padding: 14px; gap: 12px; }
+  .rp-head { flex-direction: column; align-items: stretch; }
+  .rp-controls { justify-content: space-between; gap: 6px; }
+  .rp-time { order: 5; width: 100%; min-width: 0; font-size: 11px; text-align: right; }
+  .rp-words { font-size: 17px; }
+  .replay:fullscreen, .replay.expanded { padding: 20px 14px; gap: 18px; }
+  .replay:fullscreen .rp-words, .replay.expanded .rp-words { font-size: 22px; }
+
+  /* corner buttons: smaller, out of the way of the page */
+  .corner { right: 12px; bottom: 12px; gap: 6px; }
+  .corner > button { width: 40px; height: 40px; border-radius: 12px; }
+  .corner [data-tip]::after { display: none; }
+  .theme-menu { width: min(260px, calc(100vw - 24px)); }
+
+  /* profile */
+  .history { gap: 14px; }
+  .history h2 { font-size: 16px; }
+  .p-card { flex-direction: column; align-items: stretch; padding: 18px; gap: 16px; border-radius: 16px; }
+  .p-who { gap: 14px; }
+  .p-avatar { width: 60px; height: 60px; font-size: 26px; }
+  .p-name { font-size: 22px; }
+  .p-since { font-size: 13px; }
+  .p-sync { font-size: 12px; }
+  .p-side { align-items: stretch; gap: 14px; }
+  .p-actions { justify-content: stretch; }
+  .p-actions .btn { flex: 1; justify-content: center; }
+  .p-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .p-stat .label { font-size: 12px; }
+  .p-stat .val { font-size: 22px; }
+  .h-head { gap: 10px; }
+  .h-lang, .h-filter { width: 100%; font-size: 13px; }
+  .h-lang button, .h-filter button { flex: 1 1 0; justify-content: center; padding: 8px 4px; }
+  .p-pbs { grid-template-columns: 1fr; }
+  .p-pb-group { padding: 12px; }
+  .p-pb-row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+  .p-pb { padding: 6px 2px; }
+  .p-pb .label { font-size: 11px; }
+  .p-pb .val { font-size: 24px; }
+  .p-pb .sub { font-size: 11px; }
+  .p-pb.empty .sub { visibility: hidden; }
+  .p-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .p-cell { padding: 10px 12px; }
+  .p-cell .label { font-size: 12px; }
+  .p-cell .val { font-size: 22px; }
+  .p-activity { padding: 12px; }
+  .h-chart { height: 160px; }
+  .h-legend { font-size: 12px; flex-wrap: wrap; gap: 10px; }
+  .h-table-wrap { padding: 2px; border-radius: 12px; }
+  .h-table { font-size: 14px; }
+  .h-table th { font-size: 12px; padding: 8px 8px; }
+  .h-table td { padding: 11px 8px; }
+  .h-table .opt { display: none; }
+  .h-row td:first-child { gap: 4px; }
+  .d-box { margin: 0; padding: 14px; }
+  .d-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .d-cell .val { font-size: 21px; }
+  .d-chart-wrap { height: 150px; }
+  .p-invite { flex-direction: column; align-items: stretch; padding: 18px; }
+  .p-invite .btn { justify-content: center; }
+  .h-foot { flex-direction: column; align-items: flex-start; font-size: 13px; }
+
+  /* settings page */
+  .settings { gap: 20px; }
+  .s-head h1 { font-size: 26px; }
+  .s-head p { font-size: 14px; }
+  .s-jump { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -14px; padding: 8px 14px; }
+  .s-jump a { flex: none; font-size: 14px; }
+  .s-row { padding: 14px 10px; margin: 0 -10px; gap: 10px; }
+  .s-title { font-size: 16px; }
+  .s-text p { margin-left: 0; font-size: 13.5px; }
+  .s-choices { width: 100%; }
+  .s-choices button { flex: 1 1 auto; justify-content: center; padding: 9px 8px; font-size: 14px; }
+  .s-reset .btn { justify-content: center; }
+
+  /* share panel */
+  .share-dlg { padding: 18px 16px 20px; border-radius: 18px; }
+  .sh-qr-card { width: min(240px, 70vw); }
+  .sh-row .btn { flex: 1 1 40%; }
+
+  /* footer */
+  .bottom { font-size: 12px; }
+}
+
+/* very narrow phones: the sign-in button shows just its icon */
+@media (max-width: 400px) {
+  .sign-in span { display: none; }
+  .sign-in { padding: 9px; }
+  .brand-text { font-size: 20px; }
+  .config > .group button { font-size: 12.5px; }
+  .stats-sub { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* the replay always shows its keyboard, even where the typing keyboard is hidden */
+.replay .rp-kb { display: flex; }
+/* grid and flex items may shrink below their content's width, so wide
+   things (the activity calendar, tables) scroll inside their own box
+   instead of stretching the page */
+#app > *, main > *, .history > *, .settings > *, .p-activity, .s-section, .s-row > * { min-width: 0; }
+
+/* ---------- device and language switches on the profile ---------- */
+.p-filters { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+.p-dev { background: var(--sub-alt); border-radius: 12px; padding: 4px; font-size: 15px; }
+.p-dev button { padding: 8px 14px; }
+.p-dev .cnt { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--bg); color: var(--sub); font: 12px var(--font-mono); text-align: center; }
+.p-dev button.active .cnt { background: var(--tint-strong); color: var(--main); }
+.h2-sub { color: var(--sub); font-size: .8em; }
+.d-when .icon { display: inline-block; vertical-align: -2px; margin: 0 3px 0 2px; }
+@media (max-width: 700px) {
+  .p-filters { flex-direction: column; }
+  .p-dev { width: 100%; font-size: 14px; }
+  .p-dev button { flex: 1 1 0; justify-content: center; padding: 9px 4px; }
+}
+
+/* ---------- speed chart (result screen and result details) ---------- */
+.chart-wrap { height: 250px; }
+.d-chart-wrap { height: 230px; }
+.sc { display: flex; flex-direction: column; gap: 6px; }
+.sc-legend { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; font-size: 12px; }
+.sc-legend button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 8px; color: var(--sub);
+  transition: color var(--fast), background var(--fast), opacity var(--fast);
+}
+.sc-legend button:hover { color: var(--text); background: var(--hover); }
+.sc-legend button.off { opacity: .45; text-decoration: line-through; }
+.sc-total { font-family: var(--font-mono); color: var(--error); }
+.k-wpm, .k-raw { display: inline-block; width: 14px; height: 3px; border-radius: 2px; background: var(--main); }
+.k-raw { background: var(--sub); }
+.k-err { font-style: normal; font-weight: 700; color: var(--error); font-size: 11px; }
+.sc-plot { position: relative; flex: 1; min-height: 0; }
+.sc-svg { display: block; width: 100%; height: 100%; overflow: visible; outline: none; touch-action: pan-y; }
+.sc-svg:focus-visible { outline: 2px solid var(--main); outline-offset: 4px; border-radius: 6px; }
+.chart .axis-err { fill: var(--error); opacity: .75; }
+.chart .axis-title { fill: var(--sub); font: 11px var(--font-ui); opacity: .85; }
+.chart .avg line { stroke: var(--main); stroke-width: 1.5; stroke-dasharray: 4 5; opacity: .55; }
+.chart .avg text { fill: var(--main); font: 11px var(--font-mono); opacity: .9; }
+.chart .err path { stroke-width: 2.2; }
+.chart .pt-wpm { fill: var(--main); }
+.chart .pt-raw { fill: var(--sub); }
+.chart .guide { stroke: var(--sub); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart .hd-wpm { fill: var(--bg); stroke: var(--main); stroke-width: 2.5; }
+.chart .hd-raw { fill: var(--bg); stroke: var(--sub); stroke-width: 2; }
+.sc-svg.hide-wpm .s-wpm, .sc-svg.hide-raw .s-raw, .sc-svg.hide-err .s-err { display: none; }
+.sc-tip {
+  position: absolute; z-index: 3; pointer-events: none; min-width: 112px;
+  padding: 8px 10px; border-radius: 10px; background: var(--sub-alt); box-shadow: var(--shadow);
+  font: 12px var(--font-mono); color: var(--sub); display: flex; flex-direction: column; gap: 3px;
+  transition: left .08s linear, top .08s linear;
+}
+.sc-tip .tt-sec { color: var(--text); font-family: var(--font-ui); margin-bottom: 2px; }
+.sc-tip div { display: flex; align-items: center; gap: 7px; }
+.sc-tip b { margin-left: auto; color: var(--text); font-weight: 500; }
+.d-box .sc-tip { background: var(--sub-alt); }
+@media (max-width: 700px) {
+  .chart-wrap { height: 210px; }
+  .d-chart-wrap { height: 200px; }
+  .sc-legend { justify-content: flex-start; }
+}
