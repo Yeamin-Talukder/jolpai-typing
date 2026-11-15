@@ -51,6 +51,7 @@ export class Keyboard {
           k.innerHTML = /[a-z]/.test(lo) ? `<span class="lo">${lo}</span>` : `<span class="hi">${hi}</span><span class="lo">${lo}</span>`;
         }
         if ('fj'.includes(lo)) k.classList.add('home');
+        k.dataset.k = lo; // the physical key, for finger zones and the mastery map
         this.keyEls.set(lo, k);
         this.keyEls.set(hi, k);
         rowEl.appendChild(k);
@@ -69,6 +70,7 @@ export class Keyboard {
     const k = document.createElement('div');
     k.className = `kb-key wide ${name}`;
     k.textContent = name;
+    k.dataset.k = name;
     if (name === 'shift') this.shiftEls.push(k);
     if (name === 'backspace') this.backEl = k;
     return k;

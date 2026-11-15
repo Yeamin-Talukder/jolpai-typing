@@ -19,6 +19,7 @@ import { POSTS } from './exam';
 import { accountsEnabled, clearAccountHistory, currentShareId, currentUser, initAccount, loadShared, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
 import { SharePanel } from './share';
 import { renderAbout } from './about';
+import { Learn } from './learn';
 import { renderProgressChart } from './progress-chart';
 import { THEMES, applyTheme, currentTheme, renderThemePicker } from './themes';
 import { countUp, fillIcons, icon, movePills, reduceMotion } from './icons';
@@ -528,6 +529,7 @@ document.addEventListener('keydown', e => {
   if (document.querySelector('dialog[open]')) return; // the share panel handles its own keys
   if (e.key === 'Escape' && !themeMenu.hidden) { e.preventDefault(); openThemeMenu(false); if (view === 'test' && !finished) focusInput(); return; }
   if (e.key === 'Escape' && replay.closeFull()) { e.preventDefault(); return; } // leave the expanded replay first
+  if (view === 'learn') { if (e.key === 'Escape') learn.escape(); return; } // lessons handle their own keys
   if (view !== 'test') { if (e.key === 'Escape') showView('test'); return; }
   // keys still flying when the test ends must not start a new one
   if (finished && performance.now() - finishedAt < 700) { if (e.key !== 'Escape') e.preventDefault(); return; }
@@ -860,11 +862,12 @@ function drawChart(animate = false) {
 }
 
 // ---------- pages: test, profile, settings ----------
-type View = 'test' | 'profile' | 'settings' | 'shared' | 'about';
+type View = 'test' | 'profile' | 'settings' | 'shared' | 'about' | 'learn';
 let view: View = 'test';
 const profileEl = $('history');
 const settingsEl = $('settings');
 const aboutEl = $('about');
+const learnEl = $('learn');
 const profileView: ProfileView = { lang: settings.lang, filter: 'all', shown: 25, open: null, dev: deviceKind() };
 
 /** Open the profile on this device's results, or the other device's if this one has none. */
@@ -924,6 +927,9 @@ function showView(v: View) {
   profileEl.hidden = v !== 'profile' && v !== 'shared';
   settingsEl.hidden = v !== 'settings';
   aboutEl.hidden = v !== 'about';
+  learnEl.hidden = v !== 'learn';
+  $('nav-learn').classList.toggle('active', v === 'learn');
+  if (v !== 'learn') learn.hide();
   $('nav-about').classList.toggle('active', v === 'about');
   configEl.hidden = v !== 'test';
   cornerEl.querySelectorAll<HTMLElement>('[data-toggle]').forEach(b => { b.hidden = v !== 'test'; });
@@ -939,6 +945,7 @@ function showView(v: View) {
   window.scrollTo({ top: 0 });
   if (v === 'shared') return; // openShared() draws it once loaded
   if (v === 'about') { renderAbout(aboutEl); enter(aboutEl); return; }
+  if (v === 'learn') { learn.show(); return; }
   if (v === 'profile') {
     profileView.lang = settings.lang;
     profileView.shown = 25;
@@ -991,6 +998,8 @@ const sharePanel = new SharePanel({
 $('nav-history').addEventListener('click', () => showView(view === 'profile' ? 'test' : 'profile'));
 $('nav-settings').addEventListener('click', () => showView(view === 'settings' ? 'test' : 'settings'));
 $('nav-about').addEventListener('click', () => showView(view === 'about' ? 'test' : 'about'));
+$('nav-learn').addEventListener('click', () => showView('learn'));
+const learn = new Learn(learnEl, prefs, () => showView('test'));
 $('nav-test').addEventListener('click', () => showView('test'));
 $('nav-test').classList.add('active');
 profileEl.addEventListener('keydown', e => {
