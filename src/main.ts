@@ -14,6 +14,7 @@ import { Replay, type KeyEvent } from './replay';
 import { renderSpeedChart } from './chart';
 import { addExtras } from './extras';
 import { deviceKind, deviceOf, type Device } from './device';
+import { askAmount, askText, customAmount, customText, setCustomAmount, typeableWords, TEXT_LIMITS, type AmountMode } from './custom';
 import { POSTS } from './exam';
 import { accountsEnabled, clearAccountHistory, currentShareId, currentUser, initAccount, loadShared, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
 import { SharePanel } from './share';
@@ -24,18 +25,32 @@ import { countUp, fillIcons, icon, movePills, reduceMotion } from './icons';
 
 fillIcons();
 
-type Mode = 'time' | 'words' | 'passage' | 'lesson';
+type Mode = 'time' | 'words' | 'passage' | 'lesson' | 'custom';
 type Lang = 'english' | 'bangla';
 
-const AMOUNTS: Record<Exclude<Mode, 'lesson'>, number[]> = {
+const AMOUNTS: Record<'time' | 'words' | 'passage', number[]> = {
   time: [15, 30, 60, 120, 300, 600],
   words: [10, 25, 50, 100],
   passage: [60, 120, 300, 600],
 };
 
-/** Choices for the current mode; in lesson mode the amount is the lesson number. */
+/** Choices for the current mode. In lesson mode the amount is the lesson
+ *  number; for custom text it is the time limit in seconds (0 = none). A
+ *  custom time or word count joins the usual choices. */
 function amountsFor(mode: Mode, lang: Lang): number[] {
-  return mode === 'lesson' ? lessonsFor(lang).map((_, i) => i) : AMOUNTS[mode];
+  if (mode === 'lesson') return lessonsFor(lang).map((_, i) => i);
+  if (mode === 'custom') return TEXT_LIMITS;
+  const own = customAmount(mode);
+  return own !== null && !AMOUNTS[mode].includes(own) ? [...AMOUNTS[mode], own].sort((a, b) => a - b) : AMOUNTS[mode];
+}
+
+/** How an amount is shown: 15, 2:30, 5m, 25 words, a lesson name. */
+function fmtAmount(mode: Mode, n: number): string {
+  if (mode === 'custom') return n ? `${n / 60}m` : 'no limit';
+  if (mode === 'words') return String(n);
+  if (mode === 'passage' || (n >= 300 && n % 60 === 0)) return `${n / 60}m`;
+  if (n >= 120 && n % 60 !== 0) return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+  return String(n);
 }
 
 const LESSON_LENGTH = 25;
@@ -50,7 +65,7 @@ function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '');
     const lang: Lang = s.lang === 'bangla' ? 'bangla' : 'english';
-    if (['time', 'words', 'passage', 'lesson'].includes(s.mode) && amountsFor(s.mode, lang).includes(s.amount)) {
+    if (['time', 'words', 'passage', 'lesson', 'custom'].includes(s.mode) && amountsFor(s.mode, lang).includes(s.amount)) {
       return { lang, mode: s.mode, amount: s.amount, showKeyboard: s.showKeyboard === true, showExam: s.showExam === true, punctuation: s.punctuation === true, numbers: s.numbers === true };
     }
   } catch { /* first visit or storage blocked */ }
@@ -124,7 +139,7 @@ function pickPassage(): Word[] {
 }
 
 /** Time and passage tests run against the clock. */
-const timed = () => settings.mode === 'time' || settings.mode === 'passage';
+const timed = () => settings.mode === 'time' || settings.mode === 'passage' || (settings.mode === 'custom' && settings.amount > 0);
 
 /** Time and words tests use random words (where punctuation and numbers apply). */
 const randomWordsMode = () => settings.mode === 'time' || settings.mode === 'words';
@@ -191,11 +206,30 @@ function renderConfig() {
       b.textContent = lessons[n].name;
       b.title = lessons[n].title;
     } else {
-      b.textContent = (settings.mode === 'passage' || (settings.mode === 'time' && n >= 300)) ? `${n / 60}m` : String(n);
+      b.textContent = fmtAmount(settings.mode, n);
+      if (settings.mode === 'custom') b.title = n ? `Time limit: ${n / 60} minute${n > 60 ? 's' : ''}` : 'No time limit: type the whole text';
+      if (settings.mode !== 'custom' && n === customAmount(settings.mode as AmountMode) && !AMOUNTS[settings.mode as AmountMode].includes(n)) {
+        b.classList.add('own');
+        b.title = 'Your custom choice';
+      }
     }
     b.dataset.amount = String(n);
     b.classList.toggle('active', n === settings.amount);
     amountsEl.appendChild(b);
+  }
+  if (settings.mode !== 'lesson') {
+    const c = document.createElement('button');
+    c.className = 'amount-custom';
+    if (settings.mode === 'custom') {
+      c.dataset.editText = '1';
+      c.innerHTML = `${icon('passage', 14)}edit text`;
+      c.title = 'Change the text you practise';
+    } else {
+      c.dataset.custom = '1';
+      c.innerHTML = `${icon('gear', 14)}custom`;
+      c.title = settings.mode === 'words' ? 'Choose your own number of words' : 'Choose your own time';
+    }
+    amountsEl.appendChild(c);
   }
   const bn = settings.lang === 'bangla';
   wrapEl.classList.toggle('bn', bn);
@@ -227,27 +261,69 @@ configEl.addEventListener('click', e => {
   if (b.dataset.extra) {
     const k = b.dataset.extra as 'punctuation' | 'numbers';
     settings[k] = !settings[k];
+  } else if (b.dataset.custom) {
+    const mode = settings.mode as AmountMode;
+    askAmount(mode, settings.amount).then(n => {
+      if (n === null) return;
+      setCustomAmount(mode, n);
+      settings.amount = n;
+      applyChoice();
+    });
+    return;
+  } else if (b.dataset.editText) {
+    askText(settings.lang, settings.amount).then(limit => {
+      if (limit === null) return;
+      settings.amount = limit;
+      applyChoice();
+    });
+    return;
   } else if (b.dataset.mode) {
     const mode = b.dataset.mode as Mode;
+    if (mode === 'custom' && !hasCustomText()) {
+      // first time: ask for the text before switching
+      askText(settings.lang, 0).then(limit => {
+        if (limit === null) return;
+        settings.mode = 'custom';
+        settings.amount = limit;
+        applyChoice();
+      });
+      return;
+    }
     if (mode !== settings.mode) {
       settings.mode = mode;
-      settings.amount = { time: 30, words: 25, passage: 60, lesson: 0 }[mode];
+      settings.amount = { time: 30, words: 25, passage: 60, lesson: 0, custom: 0 }[mode];
     }
   } else if (b.dataset.amount) {
     settings.amount = Number(b.dataset.amount);
   } else return;
+  applyChoice();
+});
+
+/** Save a new choice and start a test with it (or note it on the result screen). */
+function applyChoice() {
   saveSettings();
   renderConfig();
   // on the result screen a new choice waits for "next test", so a stray
   // click never throws the result away
   if (finished && !resultEl.hidden) { noteNext(); return; }
   reset();
-});
+}
+
+const hasCustomText = (lang: Lang = settings.lang) => typeableWords(customText(lang), lang).words.length > 0;
 
 // the language switch above the words
 $('lang-pick').addEventListener('click', () => {
   settings.lang = settings.lang === 'bangla' ? 'english' : 'bangla';
   if (settings.mode === 'lesson') settings.amount = Math.min(settings.amount, lessonsFor(settings.lang).length - 1);
+  if (settings.mode === 'custom' && !hasCustomText()) {
+    // no text in this language yet: ask for some, or go back to a timed test
+    askText(settings.lang, settings.amount).then(limit => {
+      if (limit === null) { settings.mode = 'time'; settings.amount = 30; } else settings.amount = limit;
+      applyChoice();
+    });
+    renderConfig();
+    return;
+  }
   saveSettings();
   renderConfig();
   reset();
@@ -266,6 +342,10 @@ function reset(repeat = false) {
   clearInterval(tick);
   if (repeat && words.length) {
     // keep the same words (a time test keeps the extra ones it added too)
+  } else if (settings.mode === 'custom') {
+    const own = typeableWords(customText(settings.lang), settings.lang).words;
+    if (own.length) words = own.map(makeWord);
+    else { settings.mode = 'time'; settings.amount = 30; saveSettings(); renderConfig(); words = pickWords(100); }
   } else if (settings.mode === 'lesson') {
     const lesson = lessonsFor(settings.lang)[settings.amount];
     words = lessonItems(lesson, settings.lang, LESSON_LENGTH).map(makeWord);
@@ -710,8 +790,11 @@ function finish() {
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 function testLabel() {
-  const amount = settings.mode === 'passage' ? `${settings.amount / 60}m`
-    : settings.mode === 'lesson' ? lessonsFor(settings.lang)[settings.amount].name : settings.amount;
+  if (settings.mode === 'custom') {
+    const n = typeableWords(customText(settings.lang), settings.lang).words.length;
+    return `custom ${n} words${settings.amount ? ` ${settings.amount / 60}m` : ''}`;
+  }
+  const amount = settings.mode === 'lesson' ? lessonsFor(settings.lang)[settings.amount].name : fmtAmount(settings.mode, settings.amount);
   const extras = randomWordsMode() ? `${settings.punctuation ? ' punctuation' : ''}${settings.numbers ? ' numbers' : ''}` : '';
   return `${settings.mode} ${amount}${extras}`;
 }

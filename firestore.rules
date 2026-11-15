@@ -52,8 +52,8 @@ service cloud.firestore {
         && d.id == id
         && d.t is int
         && d.lang in ['english', 'bangla']
-        && d.mode in ['time', 'words', 'passage', 'lesson']
-        && isNum(d.amount, 0, 600)
+        && d.mode in ['time', 'words', 'passage', 'lesson', 'custom']
+        && isNum(d.amount, 0, 3600)
         && d.label is string && d.label.size() <= 40
         && isNum(d.wpm, 0, 1000) && isNum(d.net, 0, 1000) && isNum(d.raw, 0, 1000)
         && isNum(d.acc, 0, 100)

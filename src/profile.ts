@@ -5,7 +5,7 @@ import { POSTS } from './exam';
 import { DEVICE_NAME, deviceOf, type Device } from './device';
 
 export interface ProfileUser { name: string; email: string; photo: string | null; joined: number | null }
-export type ResultFilter = 'all' | 'time' | 'words' | 'passage' | 'lesson';
+export type ResultFilter = 'all' | 'time' | 'words' | 'passage' | 'lesson' | 'custom';
 export interface ProfileView { lang: Lang; filter: ResultFilter; shown: number; open: string | null; dev: Device }
 
 /** Someone's shared profile, shown read-only. */
@@ -197,7 +197,7 @@ function detail(e: Entry, all: Entry[], shared = false) {
     </div>`;
 }
 
-const FILTERS: [ResultFilter, string][] = [['all', 'all'], ['time', 'time'], ['words', 'words'], ['passage', 'passage'], ['lesson', 'lessons']];
+const FILTERS: [ResultFilter, string][] = [['all', 'all'], ['time', 'time'], ['words', 'words'], ['passage', 'passage'], ['lesson', 'lessons'], ['custom', 'custom']];
 
 /** Draw the profile; returns the results shown, for the progress chart. */
 export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileUser | null, opts: ProfileOptions = {}): Entry[] {

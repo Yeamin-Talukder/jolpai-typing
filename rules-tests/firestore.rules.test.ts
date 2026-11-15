@@ -37,6 +37,14 @@ describe('results', () => {
     await assertFails(getDoc(doc(guest, 'users/alice/results/r1')));
   });
 
+  it('accepts custom tests and longer custom times', async () => {
+    const db = env.authenticatedContext('alice').firestore();
+    await assertSucceeds(setDoc(doc(db, 'users/alice/results/c1'), result('c1', { mode: 'custom', amount: 0, label: 'custom 120 words' })));
+    await assertSucceeds(setDoc(doc(db, 'users/alice/results/c2'), result('c2', { mode: 'time', amount: 1800, sec: 1800 })));
+    await assertFails(setDoc(doc(db, 'users/alice/results/c3'), result('c3', { mode: 'race' })));
+    await assertFails(setDoc(doc(db, 'users/alice/results/c4'), result('c4', { amount: 5000 })));
+  });
+
   it('rejects bad data', async () => {
     const db = env.authenticatedContext('alice').firestore();
     await assertFails(setDoc(doc(db, 'users/alice/results/r1'), result('other-id')));

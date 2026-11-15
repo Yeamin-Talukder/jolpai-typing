@@ -1067,3 +1067,37 @@ main { justify-content: flex-start; padding-top: clamp(8px, 6vh, 72px); }
   .pg-plot { height: 220px; }
   .pg-tip { min-width: 160px; }
 }
+
+/* ---------- custom amount / custom text ---------- */
+#amounts .amount-custom { display: inline-flex; align-items: center; gap: 6px; color: var(--sub); }
+#amounts .amount-custom:hover { color: var(--main); }
+#amounts .own { font-style: italic; }
+.custom-dlg { width: min(520px, calc(100vw - 32px)); }
+.cu-form { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.cu-label { color: var(--text); font-size: 14px; }
+.cu-amount { display: flex; align-items: center; gap: 10px; }
+.cu-amount input {
+  width: 140px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--text); font: 22px var(--font-mono);
+}
+.cu-amount span { color: var(--sub); }
+.cu-amount input:focus, .cu-text:focus { outline: 2px solid var(--main); outline-offset: 1px; }
+.cu-hint { margin: 0; min-height: 1.2em; color: var(--sub); font-size: 13px; line-height: 1.5; }
+.cu-hint.bad { color: var(--error); }
+.cu-hint.small { font-size: 12px; min-height: 0; }
+.cu-quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.cu-quick button { padding: 6px 12px; border-radius: 8px; background: var(--bg); color: var(--sub); font: 13px var(--font-mono); transition: color var(--fast), background var(--fast); }
+.cu-quick button:hover { color: var(--main); background: var(--tint); }
+.cu-text {
+  width: 100%; resize: vertical; min-height: 140px; max-height: 50vh; padding: 12px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text); font: 15px/1.6 var(--font-mono);
+}
+.cu-text.bn { font-family: 'Noto Sans Bengali', var(--font-mono); font-size: 16px; }
+.cu-limit { align-self: flex-start; background: var(--bg); border-radius: 10px; padding: 3px; font-size: 13px; }
+.cu-limit button { padding: 6px 12px; }
+.cu-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+@media (max-width: 700px) {
+  .cu-limit { width: 100%; }
+  .cu-limit button { flex: 1 1 0; justify-content: center; padding: 8px 4px; }
+  .cu-actions .btn { flex: 1; justify-content: center; }
+}
