@@ -138,7 +138,7 @@ export function askText(lang: Lang, limit: number): Promise<number | null> {
   const bn = lang === 'bangla';
   const body = `
     <label class="cu-label" for="cu-text">Paste or type the ${bn ? 'Bangla' : 'English'} text you want to practise</label>
-    <textarea id="cu-text" class="cu-text ${bn ? 'bn' : ''}" rows="7" spellcheck="false" placeholder="${bn ? 'যেমন: একটি অনুচ্ছেদ বা চাকরির পরীক্ষার পাঠ্য' : 'For example a paragraph from an exam paper or a book'}">${esc(customText(lang))}</textarea>
+    <textarea id="cu-text" class="cu-text ${bn ? 'bn' : ''}" rows="7" spellcheck="false" placeholder="${bn ? 'যেমন: কোনো বইয়ের একটি অনুচ্ছেদ, কবিতা বা গল্প' : 'For example a paragraph from a book, a poem or a story'}">${esc(customText(lang))}</textarea>
     <p class="cu-hint" aria-live="polite"></p>
     <div class="cu-label">Time limit</div>
     <div class="group seg cu-limit" role="group" aria-label="Time limit">${TEXT_LIMITS.map(n =>

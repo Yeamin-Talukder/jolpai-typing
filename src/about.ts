@@ -2,7 +2,6 @@
 // where the code lives. Numbers on the page come from the code itself, so
 // they stay right as the site grows.
 import { unicodeToSegments } from './bijoy';
-import { POSTS } from './exam';
 import { countUp, icon, type IconName } from './icons';
 import { LESSONS, UNITS } from './learn/course';
 import { THEMES } from './themes';
@@ -16,18 +15,17 @@ const GITHUB = '<svg class="icon" viewBox="0 0 24 24" width="18" height="18" ari
 const STAR = '<svg class="icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z"/></svg>';
 
 /** Phrases the hero types, key by key, through the real Bijoy engine. */
-const DEMO = ['আমি বাংলায় টাইপ করি', 'প্রতিদিন অনুশীলন করুন', 'চাকরির পরীক্ষার জন্য প্রস্তুতি'];
+const DEMO = ['আমি বাংলায় টাইপ করি', 'প্রতিদিন অনুশীলন করুন', 'আরামে বাংলা টাইপ শিখুন'];
 
 export type AboutGo = 'test' | 'learn' | 'profile' | 'settings';
 interface Feature { icon: IconName; title: string; text: string; go?: AboutGo; cta?: string }
 
 function features(): Feature[] {
-  const op = POSTS.map(p => `${p.name}: ${p.bangla} Bangla, ${p.english} English`).join(' · ');
   return [
     { icon: 'keyboard', title: 'Bijoy on any keyboard', text: 'No Bijoy software to install. Press the Bijoy keys on any keyboard and the Bangla appears as you type.', go: 'test', cta: 'try it' },
     { icon: 'lessons', title: 'A full Bijoy course', text: `${LESSONS.length} lessons in ${UNITS.length} units, from the home row to যুক্তাক্ষর, ফলা and reph, with a finger guide and stars.`, go: 'learn', cta: 'start learning' },
-    { icon: 'exam', title: 'Mock exam', text: 'A passage on paper and your answer in a box, like the real test. Then pass or fail, with every mistake shown.', go: 'learn', cta: 'take one' },
-    { icon: 'target', title: 'Job exam check', text: `Every result is compared with minimum speeds from government job circulars (${op} wpm).`, go: 'settings', cta: 'turn it on' },
+    { icon: 'exam', title: 'Mock exam', text: 'A timed passage on paper and your answer in a box. Pick a target speed, then see every mistake word by word.', go: 'learn', cta: 'take one' },
+    { icon: 'target', title: 'Key mastery', text: 'A keyboard heat map shows how well you know every key, and your weakest keys get a drill made just for them.', go: 'learn', cta: 'see your keys' },
     { icon: 'clock', title: 'Tests your way', text: 'Time, word count or real passages, or set your own time and text. Add punctuation and numbers when you are ready.', go: 'test', cta: 'pick a test' },
     { icon: 'play', title: 'Results and replay', text: 'A speed graph and full details for every test, and a replay of every key you pressed, shown on the keyboard.' },
     { icon: 'trend', title: 'Progress and profile', text: 'A progress graph, personal bests and an activity calendar. Phone and computer results are kept apart.', go: 'profile', cta: 'see yours' },
@@ -51,7 +49,7 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
         <div class="ab-hero-text">
           <span class="ab-eyebrow">${icon('info', 14)}about</span>
           <h1>Jolpai Type <span class="ab-bn">জলপাই টাইপ</span></h1>
-          <p class="ab-tag">Free typing practice for <b>Bangla (Bijoy)</b> and <b>English</b>, made for government job typing tests.</p>
+          <p class="ab-tag">Practise <b>Bangla (Bijoy)</b> and <b>English</b> typing in a clean, calm place, and learn Bijoy touch typing from the very first key. Free.</p>
           <div class="ab-cta">
             <button class="btn primary" data-go="test">${icon('keyboard', 16)}start typing</button>
             <button class="btn" data-go="learn">${icon('lessons', 16)}learn Bijoy</button>
@@ -73,11 +71,10 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
     <section class="ab-card ab-why" data-reveal>
       <h2><span class="ab-h-ico">${icon('flame', 18)}</span>why this exists</h2>
       <div class="ab-why-body">
-        <p>There was no good place to practise <b>Bangla typing</b>. English has polished, modern typing sites, but Bangla learners
-          were left with old, cluttered pages. Yet government job exams in Bangladesh test Bangla typing on the
-          <b>Bijoy</b> layout, often with a minimum speed you must reach.</p>
-        <p>Jolpai Type brings a clean, distraction-free typing test to Bangla, and a course that teaches Bijoy touch typing from
-          the first key to exam speed. English is here too.</p>
+        <p>There was no good place to practise <b>Bangla typing</b>. English has polished, modern typing sites, but people who
+          type Bangla were left with old, cluttered pages that are hard to enjoy.</p>
+        <p>Jolpai Type gives Bangla typing a <b>good environment</b>: a clean, distraction-free typing test with a better design,
+          and a course that teaches <b>Bijoy</b> touch typing step by step. English is here too.</p>
       </div>
     </section>
 
@@ -94,11 +91,11 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
     </section>
 
     <section class="ab-card ab-path" data-reveal>
-      <h2><span class="ab-h-ico">${icon('trend', 18)}</span>from zero to exam speed</h2>
+      <h2><span class="ab-h-ico">${icon('trend', 18)}</span>from your first key to fast typing</h2>
       <ol class="ab-steps">
         <li style="--i:0"><span>1</span><b>Learn the keys</b><p>Start the course at the home row. Each lesson shows the finger to use.</p></li>
         <li style="--i:1"><span>2</span><b>Practise every day</b><p>Short tests and real passages. Your streak and progress graph keep you going.</p></li>
-        <li style="--i:2"><span>3</span><b>Pass the exam</b><p>Take mock exams until your net speed clears the minimum for your post.</p></li>
+        <li style="--i:2"><span>3</span><b>Test yourself</b><p>Take a timed mock exam, set a target speed and watch your net speed climb.</p></li>
       </ol>
     </section>
 

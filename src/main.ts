@@ -15,7 +15,6 @@ import { renderSpeedChart } from './chart';
 import { addExtras } from './extras';
 import { deviceKind, deviceOf, type Device } from './device';
 import { askAmount, askText, customAmount, customText, setCustomAmount, typeableWords, TEXT_LIMITS, type AmountMode } from './custom';
-import { POSTS } from './exam';
 import { accountsEnabled, clearAccountHistory, currentShareId, currentUser, initAccount, loadShared, onLearnChange, resetLearnEverywhere, saveLearnToAccount, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
 import { SharePanel } from './share';
 import { renderAbout } from './about';
@@ -60,17 +59,17 @@ const SETTINGS_KEY = 'jolpai-type:settings';
 
 // showKeyboard replaced an older `keyboard` setting that was saved as on for
 // everyone; the on-screen keyboard is now off until the typist turns it on.
-interface Settings { lang: Lang; mode: Mode; amount: number; showKeyboard: boolean; showExam: boolean; punctuation: boolean; numbers: boolean }
+interface Settings { lang: Lang; mode: Mode; amount: number; showKeyboard: boolean; punctuation: boolean; numbers: boolean }
 
 function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '');
     const lang: Lang = s.lang === 'bangla' ? 'bangla' : 'english';
     if (['time', 'words', 'passage', 'lesson', 'custom'].includes(s.mode) && amountsFor(s.mode, lang).includes(s.amount)) {
-      return { lang, mode: s.mode, amount: s.amount, showKeyboard: s.showKeyboard === true, showExam: s.showExam === true, punctuation: s.punctuation === true, numbers: s.numbers === true };
+      return { lang, mode: s.mode, amount: s.amount, showKeyboard: s.showKeyboard === true, punctuation: s.punctuation === true, numbers: s.numbers === true };
     }
   } catch { /* first visit or storage blocked */ }
-  return { lang: 'english', mode: 'time', amount: 30, showKeyboard: false, showExam: false, punctuation: false, numbers: false };
+  return { lang: 'english', mode: 'time', amount: 30, showKeyboard: false, punctuation: false, numbers: false };
 }
 function saveSettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* ignore */ }
@@ -235,11 +234,9 @@ function renderConfig() {
   const bn = settings.lang === 'bangla';
   wrapEl.classList.toggle('bn', bn);
   hintEl.hidden = !bn;
-  for (const [name, on] of [['keyboard', showKeyboard()], ['exam', settings.showExam]] as const) {
-    const b = cornerEl.querySelector<HTMLButtonElement>(`[data-toggle="${name}"]`)!;
-    b.classList.toggle('active', on);
-    b.setAttribute('aria-pressed', String(on));
-  }
+  const kb = cornerEl.querySelector<HTMLButtonElement>('[data-toggle="keyboard"]')!;
+  kb.classList.toggle('active', showKeyboard());
+  kb.setAttribute('aria-pressed', String(showKeyboard()));
   keyboard.render(settings.lang);
   $('keyboard').hidden = !showKeyboard();
   movePills(configEl);
@@ -249,11 +246,10 @@ function renderConfig() {
 cornerEl.addEventListener('click', e => {
   const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-toggle]');
   if (!b) return;
-  if (b.dataset.toggle === 'keyboard') settings.showKeyboard = !settings.showKeyboard;
-  else settings.showExam = !settings.showExam;
+  settings.showKeyboard = !settings.showKeyboard;
   saveSettings();
   renderConfig();
-  if (!finished) { updateCaret(); focusInput(); } else drawExam();
+  if (!finished) { updateCaret(); focusInput(); }
 });
 
 configEl.addEventListener('click', e => {
@@ -763,9 +759,6 @@ function finish() {
     if (!isCorrect(i)) wrong++;
   }
   const net = sec > 0 ? Math.max(0, raw - wrong / (sec / 60)) : 0;
-  // the job exam check is optional; lessons are practice, not an exam
-  lastExam = settings.mode === 'lesson' ? null : [raw, net, attempted, wrong];
-  drawExam();
 
   // save it, unless it was too short to mean anything
   const pb = $('r-pb');
@@ -801,33 +794,7 @@ function testLabel() {
   return `${settings.mode} ${amount}${extras}`;
 }
 
-// ---------- exam check (minimums in exam.ts) ----------
-let lastExam: [number, number, number, number] | null = null; // the last result's numbers
 let lastWpm = 0; // the last result's speed, for the chart's average line
-
-/** Show or clear the exam check for the result on screen. */
-function drawExam() {
-  if (!settings.showExam || !lastExam) $('exam').innerHTML = '';
-  else showExam(...lastExam);
-}
-
-function showExam(gross: number, net: number, attempted: number, wrong: number) {
-  const lang = settings.lang;
-  const rows = POSTS.map(p => {
-    const need = p[lang];
-    const ok = net >= need;
-    return `<li class="${ok ? 'pass' : 'fail'}"><span class="mark">${icon(ok ? 'check' : 'x', 14)}</span>${p.name}<span class="need">needs ${need} wpm</span></li>`;
-  }).join('');
-  $('exam').innerHTML = `
-    <div class="exam-nums">
-      <div><div class="label">net speed</div><div class="val">${Math.round(net)} <small>wpm</small></div></div>
-      <div><div class="label">gross speed</div><div class="val">${Math.round(gross)} <small>wpm</small></div></div>
-      <div><div class="label">words typed</div><div class="val">${attempted}</div></div>
-      <div><div class="label">wrong words</div><div class="val">${wrong}</div></div>
-    </div>
-    <ul class="posts">${rows}</ul>
-    <p class="exam-note">Minimum ${lang === 'bangla' ? 'Bangla' : 'English'} speeds from recent government job circulars. Net speed = gross speed minus wrong words per minute, with 5 keystrokes counted as one word. Check your own circular, since boards can count differently.</p>`;
-}
 
 function consistency(values: number[]) {
   if (values.length < 2) return 100;
@@ -887,6 +854,7 @@ function drawProfile(animateChart = false) {
     ? renderProfile(profileEl, profileView, null, { shared: sharedData })
     : renderProfile(profileEl, profileView, profileUser(), { sharing: !!currentShareId() });
   movePills(profileEl);
+  revealProfile(animateChart);
   const pg = profileEl.querySelector<HTMLElement>('.pg-wrap');
   if (pg) renderProgressChart(pg, list, id => openResult(list, id), animateChart);
   // the activity calendar scrolls sideways on small screens: show the latest weeks
@@ -897,6 +865,29 @@ function drawProfile(animateChart = false) {
     const e = results.find(x => x.id === box.dataset.id);
     if (e?.hw) renderSpeedChart(box, { wpm: e.hw, raw: e.hr ?? [], err: e.he ?? [], avg: e.wpm }, `d-${e.id.replace(/[^a-z0-9]/gi, '')}`, true);
   });
+}
+
+/** On a fresh visit, parts of the profile slide in as they scroll into view and their numbers count up. */
+let profileIO: IntersectionObserver | null = null;
+function revealProfile(fresh: boolean) {
+  profileIO?.disconnect();
+  profileEl.classList.toggle('reveal', fresh && !reduceMotion());
+  if (!fresh || reduceMotion()) return;
+  let seen = false;
+  const parts = [...profileEl.querySelectorAll<HTMLElement>('[data-pr]')];
+  // a hidden or background page gets no visibility checks: never leave the profile invisible
+  window.setTimeout(() => { if (!seen) parts.forEach(p => p.classList.add('in')); }, 1500);
+  profileIO = new IntersectionObserver(entries => {
+    seen = true;
+    for (const en of entries) {
+      if (!en.isIntersecting) continue;
+      const part = en.target as HTMLElement;
+      part.classList.add('in');
+      part.querySelectorAll<HTMLElement>('[data-count]').forEach(n => countUp(n, Number(n.dataset.count), n.dataset.suffix || '', 800));
+      profileIO?.unobserve(part);
+    }
+  }, { threshold: 0.12 });
+  profileEl.querySelectorAll('[data-pr]').forEach(part => profileIO!.observe(part));
 }
 
 /** Open a result from the progress chart: show enough rows to include it, then open it. */
@@ -1088,8 +1079,6 @@ const SECTIONS: Section[] = [
       desc: 'On: you cannot go back to fix an earlier word. Max: backspace is turned off completely.',
       choices: choices(['off', 'off'], ['on', 'on'], ['max', 'max']), ...pick('confidence') },
     { id: 'blind', icon: 'eye', title: 'blind mode', desc: 'Mistakes are not shown while you type; you see them on the result.', ...bool('blind') },
-    { id: 'exam', icon: 'exam', title: 'exam check', desc: 'Show the government job typing speed check on the result.',
-      choices: ON_OFF, get: () => onOff(settings.showExam), set: v => { settings.showExam = v === 'on'; } },
   ] },
   { title: 'live stats', icon: 'chart', desc: 'Numbers shown above the words while you type.', options: [
     { id: 'liveSpeed', icon: 'gauge', title: 'live speed', desc: 'Your speed in wpm while you type, updated every second.', ...bool('liveSpeed') },
@@ -1119,7 +1108,7 @@ const SECTIONS: Section[] = [
 
 const refreshSettings = renderSettings(settingsEl, SECTIONS, id => {
   savePrefs(prefs);
-  if (id === 'keyboard' || id === 'exam') { saveSettings(); renderConfig(); }
+  if (id === 'keyboard') { saveSettings(); renderConfig(); }
   if (id === 'sound') previewSound(prefs);
   if (id === 'errorSound' && prefs.errorSound) keySound(prefs, false);
   applyPrefs();
@@ -1129,7 +1118,7 @@ settingsEl.addEventListener('click', e => {
   if (!confirm('Reset all settings to how they started? Your results are kept.')) return;
   Object.assign(prefs, DEFAULT_PREFS);
   savePrefs(prefs);
-  settings.showKeyboard = settings.showExam = false;
+  settings.showKeyboard = false;
   saveSettings();
   applyTheme('jolpai');
   drawThemes();

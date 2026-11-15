@@ -1,9 +1,8 @@
-// The mock exam: like a job typing test. The passage is shown on paper, you
+// The mock exam: a timed passage test. The passage is shown on paper, you
 // type it into an answer box (backspace allowed, no live speed), and at the
-// end you get gross and net speed, pass or fail for each post, and a
-// word-by-word review.
+// end you get gross and net speed, whether you reached your target speed,
+// and a word-by-word review.
 import { bijoyToUnicode, usKey } from '../bijoy';
-import { POSTS } from '../exam';
 import { icon, reduceMotion } from '../icons';
 import { BANGLA_PASSAGES, ENGLISH_PASSAGES } from '../passages';
 import { keySound } from '../sound';
@@ -13,7 +12,7 @@ import { typeable } from './course';
 import type { ExamRec } from './progress';
 
 export type Lang = 'english' | 'bangla';
-export interface ExamSetup { lang: Lang; secs: number; post: number }
+export interface ExamSetup { lang: Lang; secs: number; goal: number }
 
 export interface ExamOptions {
   prefs: Prefs;
@@ -24,6 +23,9 @@ export interface ExamOptions {
 }
 
 const DURATIONS = [120, 300, 600];
+/** Target net speeds to choose from, in wpm. */
+const GOALS: [number, string][] = [[20, 'a good start'], [25, 'steady'], [30, 'quick'], [40, 'fast']];
+const goalName = (n: number) => `${n} wpm`;
 const SETUP_KEY = 'jolpai-type:exam-setup';
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.max(0, Math.floor(s % 60))).padStart(2, '0')}`;
@@ -31,9 +33,9 @@ const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.max(0, Math.flo
 export function loadSetup(): ExamSetup {
   try {
     const s = JSON.parse(localStorage.getItem(SETUP_KEY) || 'null');
-    if (s && (s.lang === 'english' || s.lang === 'bangla') && DURATIONS.includes(s.secs) && POSTS[s.post]) return s;
+    if (s && (s.lang === 'english' || s.lang === 'bangla') && DURATIONS.includes(s.secs) && GOALS.some(g => g[0] === s.goal)) return s;
   } catch { /* ignore */ }
-  return { lang: 'bangla', secs: 300, post: 0 };
+  return { lang: 'bangla', secs: 300, goal: 25 };
 }
 function saveSetup(s: ExamSetup) { try { localStorage.setItem(SETUP_KEY, JSON.stringify(s)); } catch { /* ignore */ } }
 
@@ -98,7 +100,7 @@ export class MockExam {
       <div class="ex ex-setup">
         <header class="lp-top">
           <button class="lp-back" data-act="exit">${icon('next', 16, 'flip')}<span>course</span></button>
-          <div class="lp-title"><span class="lp-eyebrow">practice like the real thing</span><b>Mock typing exam <span class="bn">মডেল টেস্ট</span></b></div>
+          <div class="lp-title"><span class="lp-eyebrow">a timed passage, checked word by word</span><b>Mock typing exam <span class="bn">মডেল টেস্ট</span></b></div>
         </header>
         <div class="ex-grid">
           <section class="ex-card">
@@ -110,11 +112,11 @@ export class MockExam {
             <h2>${icon('clock', 18)}time</h2>
             <div class="group seg ex-seg" data-group="secs">${DURATIONS.map(d =>
               `<button data-secs="${d}" class="${s.secs === d ? 'active' : ''}">${d / 60} minutes</button>`).join('')}</div>
-            <h2>${icon('exam', 18)}post</h2>
-            <div class="ex-posts">${POSTS.map((p, i) => `
-              <button class="ex-post ${s.post === i ? 'active' : ''}" data-post="${i}">
-                <b>${esc(p.name)}</b>
-                <span>needs <em>${p.bangla}</em> wpm Bangla · <em>${p.english}</em> wpm English (net)</span>
+            <h2>${icon('target', 18)}target speed</h2>
+            <div class="ex-posts ex-goals">${GOALS.map(([n, label]) => `
+              <button class="ex-post ${s.goal === n ? 'active' : ''}" data-goal="${n}">
+                <b>${n} <small>wpm net</small></b>
+                <span>${label}</span>
               </button>`).join('')}</div>
           </section>
           <section class="ex-card ex-rules">
@@ -126,7 +128,6 @@ export class MockExam {
               <li>${icon('target', 16)}Net speed = gross speed minus wrong words per minute. A wrong, missing or extra word each counts as one mistake.</li>
               <li>${icon('keyboard', 16)}${s.lang === 'bangla' ? 'Type Bijoy with English keys, no Bijoy software needed.' : 'Capitals and punctuation must match the passage.'}</li>
             </ul>
-            <p class="ex-note">The minimum speeds come from recent government job circulars. Boards can count differently, so check your own circular.</p>
             <button class="btn primary ex-start" data-act="start">${icon('play', 16)}start the exam</button>
           </section>
         </div>
@@ -143,7 +144,7 @@ export class MockExam {
       if (b.dataset.act) return this.action(b.dataset.act);
       if (b.dataset.lang) this.setup.lang = b.dataset.lang as Lang;
       else if (b.dataset.secs) this.setup.secs = Number(b.dataset.secs);
-      else if (b.dataset.post) this.setup.post = Number(b.dataset.post);
+      else if (b.dataset.goal) this.setup.goal = Number(b.dataset.goal);
       else return;
       saveSetup(this.setup);
       this.showSetup();
@@ -170,12 +171,11 @@ export class MockExam {
     this.ended = false;
     this.running = false;
     const bn = this.setup.lang === 'bangla';
-    const post = POSTS[this.setup.post];
     this.root.innerHTML = `
       <div class="ex ex-run">
         <header class="lp-top">
           <button class="lp-back" data-act="exit" title="Leave the exam (Esc)">${icon('x', 16)}<span>leave</span></button>
-          <div class="lp-title"><span class="lp-eyebrow">${esc(post.name)} · needs ${post[this.setup.lang]} wpm</span><b>Mock exam · ${bn ? 'বাংলা' : 'English'} · ${this.setup.secs / 60} minutes</b></div>
+          <div class="lp-title"><span class="lp-eyebrow">target ${this.setup.goal} wpm net</span><b>Mock exam · ${bn ? 'বাংলা' : 'English'} · ${this.setup.secs / 60} minutes</b></div>
           <div class="ex-clock"><span>${icon('clock', 18)}</span><b>${mmss(this.setup.secs)}</b></div>
           <button class="btn ex-submit" data-act="submit" disabled>${icon('check', 15)}submit</button>
         </header>
@@ -289,12 +289,11 @@ export class MockExam {
     const keys = this.words.filter(w => w !== '');
     const typed = keys.map(w => (bn ? bijoyToUnicode(w) : w));
     const s = scoreExam(typed, keys.map(w => w.length), this.target, secs);
-    const post = POSTS[this.setup.post];
-    const need = post[this.setup.lang];
+    const need = this.setup.goal;
     const pass = s.net >= need;
     const rec: ExamRec = {
       t: Date.now(), lang: this.setup.lang, secs: Math.round(secs), limit: this.setup.secs, gross: Math.round(s.gross * 10) / 10, net: Math.round(s.net * 10) / 10,
-      acc: Math.round(s.acc * 10) / 10, words: s.typed, errors: s.errors, post: post.name, need, pass,
+      acc: Math.round(s.acc * 10) / 10, words: s.typed, errors: s.errors, post: goalName(need), need, pass,
     };
     if (s.typed > 0) this.o.onDone(rec, s, this.setup);
     this.showResult(rec, s);
@@ -316,7 +315,7 @@ export class MockExam {
         </header>
         <section class="ex-verdict ${rec.pass ? 'pass' : 'fail'}">
           <span class="ex-verdict-mark">${icon(rec.pass ? 'check' : 'x', 34)}</span>
-          <div><b>${rec.pass ? 'Passed' : 'Not yet'}</b><p>${rec.pass ? `Your net speed meets the ${esc(rec.post)} minimum of ${rec.need} wpm.` : `${esc(rec.post)} needs ${rec.need} wpm net. You are ${Math.max(0, Math.ceil(rec.need - rec.net))} wpm away.`}</p></div>
+          <div><b>${rec.pass ? 'Target reached' : 'Not yet'}</b><p>${rec.pass ? `Your net speed reached your target of ${rec.need} wpm.` : `Your target is ${rec.need} wpm net. You are ${Math.max(0, Math.ceil(rec.need - rec.net))} wpm away.`}</p></div>
         </section>
         <section class="ex-stats">
           <div><span class="label">net speed</span><b>${Math.round(s.net)}</b><small>wpm</small></div>
@@ -326,10 +325,10 @@ export class MockExam {
           <div><span class="label">words typed</span><b>${s.typed}</b><small>in ${mmss(rec.secs)}</small></div>
         </section>
         <section class="ex-card ex-posts-result">
-          <h2>${icon('exam', 18)}against each post</h2>
-          <ul class="posts">${POSTS.map(p => {
-            const n = p[this.setup.lang], ok = s.net >= n;
-            return `<li class="${ok ? 'pass' : 'fail'}"><span class="mark">${icon(ok ? 'check' : 'x', 14)}</span>${esc(p.name)}<span class="need">needs ${n} net wpm</span></li>`;
+          <h2>${icon('target', 18)}speed targets</h2>
+          <ul class="posts">${GOALS.map(([n, label]) => {
+            const ok = s.net >= n;
+            return `<li class="${ok ? 'pass' : 'fail'}"><span class="mark">${icon(ok ? 'check' : 'x', 14)}</span>${n} wpm net<span class="need">${label}</span></li>`;
           }).join('')}</ul>
         </section>
         <section class="ex-card">

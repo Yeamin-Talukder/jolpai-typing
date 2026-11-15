@@ -71,7 +71,7 @@ function showHow() {
   const d = document.createElement('dialog');
   d.className = 'share-dlg how-dlg';
   d.innerHTML = `<div class="sh-top"><h2>${icon('info', 18)}how each lesson works</h2><button class="sh-close" aria-label="Close">${icon('x', 18)}</button></div>${HOW}
-    <p class="ln-how-more">The course has ${LESSONS.length} lessons in ${UNITS.length} units, from where to rest your fingers to the Bijoy rules (vowel signs typed first, যুক্তাক্ষর, ফলা, reph) and exam speed.</p>`;
+    <p class="ln-how-more">The course has ${LESSONS.length} lessons in ${UNITS.length} units, from where to rest your fingers to the Bijoy rules (vowel signs typed first, যুক্তাক্ষর, ফলা, reph) and full speed.</p>`;
   document.body.appendChild(d);
   const close = () => { if (d.open) d.close(); d.remove(); };
   d.addEventListener('click', e => { if (e.target === d || (e.target as Element).closest('.sh-close')) close(); });
@@ -130,10 +130,10 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
         <section class="ln-exam">
           <div class="ln-exam-head">
             <div><div class="ln-eyebrow">${icon('exam', 15)}mock exam · মডেল টেস্ট</div>
-              <h2>Ready for the real test?</h2></div>
+              <h2>Test your speed</h2></div>
             <button class="btn primary" data-exam>${icon('play', 15)}start</button>
           </div>
-          <p>A passage on paper, your answer in a box, backspace allowed, no live speed. Then pass or fail and every mistake.</p>
+          <p>A passage on paper, your answer in a box, backspace allowed, no live speed. Pick a target speed, then see every mistake.</p>
           ${lastExam ? `<div class="ln-exam-row ${lastExam.pass ? 'pass' : 'fail'}">
             <span class="ln-exam-mark">${icon(lastExam.pass ? 'check' : 'x', 14)}</span>
             <span class="ln-exam-what">last: ${lastExam.lang === 'bangla' ? 'বাংলা' : 'English'} · ${Math.round((lastExam.limit ?? lastExam.secs) / 60)} min<small>${d.exams.length} exam${d.exams.length === 1 ? '' : 's'} · best ${Math.round(bestNet)} net</small></span>

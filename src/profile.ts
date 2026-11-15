@@ -1,7 +1,6 @@
 // The profile page: who you are, personal bests, averages, activity and every result.
 import { loadHistory, type Entry, type Lang } from './history';
 import { icon, type IconName } from './icons';
-import { POSTS } from './exam';
 import { DEVICE_NAME, deviceOf, type Device } from './device';
 
 export interface ProfileUser { name: string; email: string; photo: string | null; joined: number | null }
@@ -18,6 +17,11 @@ export interface ProfileOptions { shared?: SharedData; sharing?: boolean }
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const r0 = (n: number) => String(Math.round(n));
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+/** A whole number that counts up when it comes into view. */
+const num = (n: number, suffix = '') => `<span data-count="${Math.round(n)}" data-suffix="${suffix}">${Math.round(n)}${suffix}</span>`;
+/** A section heading with an icon tile. */
+const heading = (ic: IconName, title: string, sub = '') =>
+  `<h2 class="p-h"><span class="p-h-ico">${icon(ic, 16)}</span>${title}${sub ? ` <span class="h2-sub">${sub}</span>` : ''}</h2>`;
 
 export function fmtDuration(sec: number) {
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.round(sec % 60);
@@ -63,12 +67,14 @@ function profileCard(all: Entry[], everything: Entry[], user: ProfileUser | null
   const avatar = user
     ? user.photo ? `<img src="${esc(user.photo)}" alt="" referrerpolicy="no-referrer" />` : `<span>${initial}</span>`
     : icon('user', 34);
-  const stat = (ic: IconName, label: string, value: string) =>
-    `<div class="p-stat"><div class="label">${icon(ic, 14)}${label}</div><div class="val">${value}</div></div>`;
+  const stat = (ic: IconName, label: string, value: string, cls = '') =>
+    `<div class="p-stat ${cls}"><span class="p-stat-ico">${icon(ic, 18)}</span><div><div class="label">${label}</div><div class="val">${value}</div></div></div>`;
+  const badge = shared ? 'globe' : user ? 'cloud' : 'device';
+  const days = streak(all);
   return `
-    <div class="p-card">
+    <div class="p-card" data-pr>
       <div class="p-who">
-        <div class="p-avatar ${user ? '' : 'guest'}">${avatar}</div>
+        <div class="p-avatar-wrap"><div class="p-avatar ${user ? '' : 'guest'}">${avatar}</div><span class="p-badge" title="${shared ? 'shared profile' : user ? 'saved to your account' : 'saved in this browser'}">${icon(badge, 12)}</span></div>
         <div>
           <div class="p-name">${user ? esc(user.name) : 'guest'}</div>
           <div class="p-since">${since}</div>
@@ -78,9 +84,9 @@ function profileCard(all: Entry[], everything: Entry[], user: ProfileUser | null
       <div class="p-side">
       ${actions}
       <div class="p-stats">
-        ${stat('hash', 'tests completed', String(tests))}
+        ${stat('hash', 'tests completed', num(tests))}
         ${stat('clock', 'time typing', fmtDuration(time))}
-        ${stat('flame', 'day streak', String(streak(all)))}
+        ${stat('flame', 'day streak', num(days), days > 0 ? 'lit' : '')}
       </div>
       </div>
     </div>`;
@@ -93,38 +99,44 @@ const PB_GROUPS: { mode: string; title: string; amounts: number[]; name: (n: num
 ];
 
 function pbSection(list: Entry[]) {
-  return `<div class="p-pbs">${PB_GROUPS.map(g => `
-    <div class="p-pb-group">
-      <h3>${icon(g.mode === 'time' ? 'clock' : g.mode === 'words' ? 'words' : 'passage', 14)}${g.title}</h3>
-      <div class="p-pb-row">${g.amounts.map(n => {
-        const runs = list.filter(e => e.mode === g.mode && e.amount === n);
-        const key = (e: Entry) => (g.net ? e.net : e.wpm);
-        const best = runs.reduce<Entry | null>((m, e) => (!m || key(e) > key(m) ? e : m), null);
-        return `<div class="p-pb ${best ? '' : 'empty'}" ${best ? `title="${esc(fmtDate(best.t))} · raw ${r0(best.raw)}"` : ''}>
+  return `<div class="p-pbs" data-pr>${PB_GROUPS.map((g, gi) => {
+    const key = (e: Entry) => (g.net ? e.net : e.wpm);
+    const bests = g.amounts.map(n => list.filter(e => e.mode === g.mode && e.amount === n)
+      .reduce<Entry | null>((m, e) => (!m || key(e) > key(m) ? e : m), null));
+    const top = Math.max(0, ...bests.map(b => (b ? Math.round(key(b)) : 0)));
+    return `
+    <div class="p-pb-group" style="--i:${gi}">
+      <h3><span class="p-pb-ico">${icon(g.mode === 'time' ? 'clock' : g.mode === 'words' ? 'words' : 'passage', 15)}</span>${g.title}</h3>
+      <div class="p-pb-row">${g.amounts.map((n, i) => {
+        const best = bests[i];
+        const isTop = !!best && top > 0 && Math.round(key(best)) === top;
+        return `<div class="p-pb ${best ? '' : 'empty'} ${isTop ? 'is-best' : ''}" style="--i:${i}" ${best ? `title="${esc(fmtDate(best.t))} · raw ${r0(best.raw)}"` : ''}>
+          ${isTop ? `<span class="p-pb-crown" aria-label="best in this group">${icon('trophy', 12)}</span>` : ''}
           <div class="label">${g.name(n)}</div>
-          <div class="val">${best ? r0(key(best)) : '–'}</div>
+          <div class="val">${best ? num(key(best)) : '–'}</div>
           <div class="sub">${best ? `${r0(best.acc)}% acc` : 'no test yet'}</div>
         </div>`;
       }).join('')}</div>
-    </div>`).join('')}</div>`;
+    </div>`;
+  }).join('')}</div>`;
 }
 
 function statsGrid(list: Entry[]) {
   const last10 = list.slice(-10);
-  const cells: [string, string][] = [
-    ['highest wpm', r0(Math.max(0, ...list.map(e => e.wpm)))],
-    ['average wpm', r0(avg(list.map(e => e.wpm)))],
-    ['average wpm (last 10)', r0(avg(last10.map(e => e.wpm)))],
-    ['highest raw', r0(Math.max(0, ...list.map(e => e.raw)))],
-    ['average raw', r0(avg(list.map(e => e.raw)))],
-    ['highest accuracy', `${r0(Math.max(0, ...list.map(e => e.acc)))}%`],
-    ['average accuracy', `${r0(avg(list.map(e => e.acc)))}%`],
-    ['average accuracy (last 10)', `${r0(avg(last10.map(e => e.acc)))}%`],
-    ['tests', String(list.length)],
-    ['time typing', fmtDuration(list.reduce((a, e) => a + e.sec, 0))],
-    ['words typed (about)', r0(list.reduce((a, e) => a + (e.raw * e.sec) / 60, 0))],
+  const cells: [IconName, string, string][] = [
+    ['trophy', 'highest wpm', num(Math.max(0, ...list.map(e => e.wpm)))],
+    ['gauge', 'average wpm', num(avg(list.map(e => e.wpm)))],
+    ['trend', 'average wpm (last 10)', num(avg(last10.map(e => e.wpm)))],
+    ['zap', 'highest raw', num(Math.max(0, ...list.map(e => e.raw)))],
+    ['bar', 'average raw', num(avg(list.map(e => e.raw)))],
+    ['target', 'highest accuracy', num(Math.max(0, ...list.map(e => e.acc)), '%')],
+    ['target', 'average accuracy', num(avg(list.map(e => e.acc)), '%')],
+    ['check', 'average accuracy (last 10)', num(avg(last10.map(e => e.acc)), '%')],
+    ['hash', 'tests', num(list.length)],
+    ['clock', 'time typing', fmtDuration(list.reduce((a, e) => a + e.sec, 0))],
+    ['words', 'words typed (about)', num(list.reduce((a, e) => a + (e.raw * e.sec) / 60, 0))],
   ];
-  return `<div class="p-grid">${cells.map(([l, v]) => `<div class="p-cell"><div class="label">${l}</div><div class="val">${v}</div></div>`).join('')}</div>`;
+  return `<div class="p-grid" data-pr>${cells.map(([ic, l, v], i) => `<div class="p-cell" style="--i:${i}"><span class="p-cell-ico">${icon(ic, 15)}</span><div class="label">${l}</div><div class="val">${v}</div></div>`).join('')}</div>`;
 }
 
 /** A year of tests, one square per day, like a contribution calendar. */
@@ -146,16 +158,16 @@ function activity(all: Entry[], now = new Date()) {
       if (d > today) cells += '<i class="future"></i>';
       else {
         const n = counts.get(dayKey(d)) || 0;
-        cells += `<i class="l${level(n)}" title="${n || 'no'} test${n === 1 ? '' : 's'} on ${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}"></i>`;
+        cells += `<i class="l${level(n)}${d.getTime() === today.getTime() ? ' today' : ''}" title="${n || 'no'} test${n === 1 ? '' : 's'} on ${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}"></i>`;
       }
       d.setDate(d.getDate() + 1);
     }
-    cols += `<div class="p-week">${cells}</div>`;
+    cols += `<div class="p-week" style="--w:${w}">${cells}</div>`;
   }
   const yearCount = all.filter(e => e.t >= start.getTime()).length;
-  return `<div class="p-activity">
+  return `<div class="p-activity" data-pr>
       <div class="p-act-scroll"><div class="p-months">${months}</div><div class="p-weeks">${cols}</div></div>
-      <div class="p-act-foot"><span>${yearCount} test${yearCount === 1 ? '' : 's'} in the last year</span>
+      <div class="p-act-foot"><span>${icon('flame', 13)}${num(yearCount)} test${yearCount === 1 ? '' : 's'} in the last year</span>
         <span class="p-scale">less <i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> more</span></div>
     </div>`;
 }
@@ -179,10 +191,6 @@ function detail(e: Entry, all: Entry[], shared = false) {
     e.wrong !== undefined ? cell('wrong words', String(e.wrong)) : '',
     cell('time', fmtDuration(e.sec)),
   ].join('');
-  const exam = e.mode === 'lesson' ? '' : `<ul class="posts d-posts">${POSTS.map(p => {
-    const need = p[e.lang], ok = e.net >= need;
-    return `<li class="${ok ? 'pass' : 'fail'}"><span class="mark">${icon(ok ? 'check' : 'x', 14)}</span>${p.name}<span class="need">needs ${need} net wpm</span></li>`;
-  }).join('')}</ul>`;
   const graph = e.hw && e.hw.length
     ? `<div class="d-chart-wrap" data-id="${esc(e.id)}"></div>`
     : shared ? '' : `<p class="d-note">${icon('info', 14)}The speed graph and character counts are saved for tests taken from now on.</p>`;
@@ -193,7 +201,6 @@ function detail(e: Entry, all: Entry[], shared = false) {
       </div>
       <div class="d-stats">${cells}</div>
       ${graph}
-      ${exam}
     </div>`;
 }
 
@@ -209,16 +216,16 @@ export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileU
   const all = everything.filter(e => deviceOf(e) === view.dev);
   const inLang = all.filter(e => e.lang === view.lang);
   const list = view.filter === 'all' ? inLang : inLang.filter(e => e.mode === view.filter);
-  const rows = list.slice(-view.shown).reverse().map(e => {
+  const rows = list.slice(-view.shown).reverse().map((e, i) => {
     const open = view.open === e.id;
-    return `<tr class="h-row ${open ? 'open' : ''}" data-id="${esc(e.id)}" tabindex="0" aria-expanded="${open}" title="Show the details of this test">`
-      + `<td>${icon('next', 13, 'h-chev')}${fmtDate(e.t)}</td><td>${esc(e.label)}</td><td class="num">${r0(e.wpm)}</td><td class="num opt">${r0(e.raw)}</td><td class="num opt">${e.mode === 'lesson' ? '–' : r0(e.net)}</td><td class="num">${r0(e.acc)}%</td><td class="num opt">${fmtDuration(e.sec)}</td></tr>`
+    return `<tr class="h-row ${open ? 'open' : ''}" style="--r:${Math.min(i, 24)}" data-id="${esc(e.id)}" tabindex="0" aria-expanded="${open}" title="Show the details of this test">`
+      + `<td>${icon('next', 13, 'h-chev')}${fmtDate(e.t)}</td><td>${esc(e.label)}</td><td class="num"><span class="h-wpm" style="--p:${Math.min(100, Math.round(e.wpm / 1.2))}%">${r0(e.wpm)}</span></td><td class="num opt">${r0(e.raw)}</td><td class="num opt">${e.mode === 'lesson' ? '–' : r0(e.net)}</td><td class="num">${r0(e.acc)}%</td><td class="num opt">${fmtDuration(e.sec)}</td></tr>`
       + (open ? `<tr class="h-detail"><td colspan="7">${detail(e, all, !!shared)}</td></tr>` : '');
   }).join('');
 
   el.innerHTML = `
     ${profileCard(all, everything, user, opts)}
-    <div class="p-filters">
+    <div class="p-filters" data-pr>
       <div class="group seg p-dev" role="group" aria-label="Device">
         ${(['desktop', 'mobile'] as Device[]).map(d => `<button data-dev="${d}" class="${view.dev === d ? 'active' : ''}" title="Results typed on ${d === 'mobile' ? 'a phone or tablet' : 'a computer'}">${icon(d === 'mobile' ? 'phone' : 'device', 15)}${DEVICE_NAME[d]}<span class="cnt">${perDevice[d]}</span></button>`).join('')}
       </div>
@@ -227,28 +234,28 @@ export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileU
         <button data-hlang="english" class="${view.lang === 'english' ? 'active' : ''}">english</button>
       </div>
     </div>
-    <h2>${icon('trophy', 15)}personal bests <span class="h2-sub">· ${DEVICE_NAME[view.dev]}</span></h2>
+    ${heading('trophy', 'personal bests', `· ${DEVICE_NAME[view.dev]}`)}
     ${pbSection(inLang)}
-    <h2>${icon('calendar', 15)}activity <span class="h2-sub">· ${DEVICE_NAME[view.dev]}</span></h2>
+    ${heading('calendar', 'activity', `· ${DEVICE_NAME[view.dev]}`)}
     ${activity(all)}
     <div class="h-head">
-      <h2>${icon('zap', 15)}stats</h2>
+      ${heading('chart', 'stats')}
       <div class="group seg h-filter">${FILTERS.map(([f, label]) => `<button data-filter="${f}" class="${view.filter === f ? 'active' : ''}">${label}</button>`).join('')}</div>
     </div>
     ${list.length === 0
-      ? `<div class="h-empty-box">${icon('chart', 32)}<p class="h-empty">No ${view.filter === 'all' ? '' : `${FILTERS.find(f => f[0] === view.filter)![1]} `}tests yet in this language on ${view.dev === 'mobile' ? 'a phone or tablet' : 'a computer'}.${shared ? '' : ' Finish one and it will show up here.'}</p></div>`
+      ? `<div class="h-empty-box"><span class="h-empty-ico">${icon('chart', 30)}</span><p class="h-empty">No ${view.filter === 'all' ? '' : `${FILTERS.find(f => f[0] === view.filter)![1]} `}tests yet in this language on ${view.dev === 'mobile' ? 'a phone or tablet' : 'a computer'}.${shared ? '' : ' Finish one and it will show up here.'}</p></div>`
       : `${statsGrid(list)}
-    <h2>${icon('trend', 15)}progress</h2>
-    ${list.length < 2 ? '<p class="h-empty">Take a few more tests to see your progress here.</p>' : '<div class="pg-wrap"></div>'}
-    <h2>${icon('clock', 15)}results</h2>
-    <div class="h-table-wrap"><table class="h-table">
+    ${heading('trend', 'progress')}
+    ${list.length < 2 ? '<p class="h-empty">Take a few more tests to see your progress here.</p>' : '<div class="pg-wrap" data-pr></div>'}
+    ${heading('clock', 'results', `· ${list.length} test${list.length === 1 ? '' : 's'}`)}
+    <div class="h-table-wrap" data-pr><table class="h-table">
       <thead><tr><th>date</th><th>test</th><th class="num">wpm</th><th class="num opt">raw</th><th class="num opt">net</th><th class="num">acc</th><th class="num opt">time</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
     ${list.length > view.shown ? `<button id="h-more" class="btn more">show ${Math.min(25, list.length - view.shown)} more · ${list.length - view.shown} left</button>` : ''}`}
     ${shared ? `<div class="p-invite">
       <div><div class="p-invite-title">Practise typing like ${esc(shared.name.split(' ')[0])}</div>
-      <p>Jolpai Type is free typing practice for Bangla (Bijoy) and English, made for job typing tests.</p></div>
+      <p>Jolpai Type is free typing practice for Bangla (Bijoy) and English, with a course to learn Bijoy touch typing.</p></div>
       <button id="p-start" class="btn primary">${icon('keyboard', 15)}start typing</button>
     </div>` : `<div class="h-foot">
       <span class="h-where">${icon(user ? 'cloud' : 'device', 14)}${user ? `Saved to your account (${esc(user.email || user.name)}), on every device you sign in on.` : 'Saved only in this browser. Sign in to keep your history on every device.'}</span>

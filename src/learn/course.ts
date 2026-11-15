@@ -41,7 +41,7 @@ export const UNITS: Unit[] = [
   { n: 5, title: 'Bottom row', short: 'Bottom', bn: 'নিচের সারি', summary: 'র ন স ম, the vowel sign ে, ও and the Shift letters ল ণ ষ শ ৈ ৌ.', icon: 'words' },
   { n: 6, title: 'Bijoy essentials', short: 'Bijoy rules', bn: 'বিজয়ের নিয়ম', summary: 'Independent vowels, যুক্তাক্ষর, ফলা, reph and ং ঃ ঁ ৎ: what makes Bijoy Bijoy.', icon: 'lessons' },
   { n: 7, title: 'Numbers', short: 'Numbers', bn: 'সংখ্যা', summary: 'Bangla digits ০ to ৯ on the number row.', icon: 'hash' },
-  { n: 8, title: 'Real typing', short: 'Real typing', bn: 'আসল টাইপিং', summary: 'Common words, sentences, speed and an exam-style test.', icon: 'exam' },
+  { n: 8, title: 'Real typing', short: 'Real typing', bn: 'আসল টাইপিং', summary: 'Common words, sentences, speed and a timed passage.', icon: 'exam' },
 ];
 
 const HOME_START = 'jf', HOME_R = 'kl', HOME_L = 'dsa', HOME_B = 'h';
@@ -145,8 +145,8 @@ const SPECS: Spec[] = [
   // ---- unit 8: real typing ----
   { id: 'real-words', unit: 8, title: 'Common words', bn: 'শব্দ', summary: 'The most used Bangla words, everything you have learned together.', newKeys: '', drill: 0, words: 40, source: 'words', goal: 16 },
   { id: 'real-sentences', unit: 8, title: 'Sentences', bn: 'বাক্য', summary: 'Full sentences with punctuation, from start to দাঁড়ি.', newKeys: '', drill: 0, words: 45, source: 'sentences', goal: 16 },
-  { id: 'real-speed', unit: 8, title: 'One-minute speed test', bn: 'গতি', summary: 'Type for one minute. Two stars at 20 wpm, the usual exam minimum.', newKeys: '', drill: 0, words: 0, source: 'words', timed: 60, goal: 20 },
-  { id: 'real-exam', unit: 8, title: 'Exam practice', bn: 'পরীক্ষা', summary: 'Two minutes of passage typing, the way job tests do it.', newKeys: '', drill: 0, words: 0, source: 'passage', timed: 120, goal: 20 },
+  { id: 'real-speed', unit: 8, title: 'One-minute speed test', bn: 'গতি', summary: 'Type for one minute. Two stars at 20 wpm.', newKeys: '', drill: 0, words: 0, source: 'words', timed: 60, goal: 20 },
+  { id: 'real-exam', unit: 8, title: 'Passage practice', bn: 'অনুচ্ছেদ', summary: 'Two minutes of typing a real passage against the clock.', newKeys: '', drill: 0, words: 0, source: 'passage', timed: 120, goal: 20 },
 ];
 
 // allowed keys grow lesson by lesson
