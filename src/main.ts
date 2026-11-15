@@ -27,17 +27,19 @@ const LESSON_LENGTH = 25;
 
 const SETTINGS_KEY = 'jolpai-type:settings';
 
-interface Settings { lang: Lang; mode: Mode; amount: number; keyboard: boolean }
+// showKeyboard replaced an older `keyboard` setting that was saved as on for
+// everyone; the on-screen keyboard is now off until the typist turns it on.
+interface Settings { lang: Lang; mode: Mode; amount: number; showKeyboard: boolean }
 
 function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '');
     const lang: Lang = s.lang === 'bangla' ? 'bangla' : 'english';
     if (['time', 'words', 'passage', 'lesson'].includes(s.mode) && amountsFor(s.mode, lang).includes(s.amount)) {
-      return { lang, mode: s.mode, amount: s.amount, keyboard: s.keyboard !== false };
+      return { lang, mode: s.mode, amount: s.amount, showKeyboard: s.showKeyboard === true };
     }
   } catch { /* first visit or storage blocked */ }
-  return { lang: 'english', mode: 'time', amount: 30, keyboard: true };
+  return { lang: 'english', mode: 'time', amount: 30, showKeyboard: false };
 }
 function saveSettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* ignore */ }
@@ -58,7 +60,7 @@ const configEl = $('config');
 const amountsEl = $('amounts');
 const hintEl = $('lang-hint');
 const keyboard = new Keyboard($('keyboard'));
-const showKeyboard = () => settings.keyboard || settings.mode === 'lesson';
+const showKeyboard = () => settings.showKeyboard;
 
 // ---------- words ----------
 // Every word is typed as a sequence of keys. For English the keys are the
@@ -149,7 +151,6 @@ function renderConfig() {
   hintEl.hidden = !bn;
   const kbBtn = configEl.querySelector<HTMLButtonElement>('[data-toggle="keyboard"]')!;
   kbBtn.classList.toggle('active', showKeyboard());
-  kbBtn.disabled = settings.mode === 'lesson'; // lessons always show it
   keyboard.render(settings.lang);
   $('keyboard').hidden = !showKeyboard();
 }
@@ -158,7 +159,7 @@ configEl.addEventListener('click', e => {
   const b = (e.target as HTMLElement).closest('button');
   if (!b || b.disabled) return;
   if (b.dataset.toggle === 'keyboard') {
-    settings.keyboard = !settings.keyboard;
+    settings.showKeyboard = !settings.showKeyboard;
     saveSettings();
     renderConfig();
     updateCaret();
