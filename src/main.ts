@@ -907,11 +907,14 @@ function toggleResult(id: string) {
   if (profileView.open) profileEl.querySelector('.h-detail')?.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'nearest' });
 }
 
+/** The page's own title from index.html, put back after a shared profile. */
+const PAGE_TITLE = document.title;
+
 function showView(v: View) {
   // leaving a shared profile: drop ?p= from the address
   if (view === 'shared' && v !== 'shared') {
     history.replaceState(null, '', location.pathname);
-    document.title = 'Jolpai Type';
+    document.title = PAGE_TITLE;
     sharedData = null;
   }
   view = v;
