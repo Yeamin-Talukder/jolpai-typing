@@ -8,6 +8,8 @@
 
 <p><b>জলপাই টাইপ</b>: অনলাইনে বিনামূল্যে বাংলা টাইপিং অনুশীলন ও বিজয় টাইপিং শেখার জায়গা</p>
 
+<p><b>Made for Bangla typing</b> · বাংলা টাইপিংয়ের জন্য তৈরি · for everyone who wants to type Bangla fast and correctly</p>
+
 [![Stars](https://img.shields.io/github/stars/Yeamin-Talukder/jolpai-type?style=for-the-badge&logo=github&label=stars&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-type/stargazers)
 [![Forks](https://img.shields.io/github/forks/Yeamin-Talukder/jolpai-type?style=for-the-badge&logo=github&label=forks&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-type/network/members)
 [![Watchers](https://img.shields.io/github/watchers/Yeamin-Talukder/jolpai-type?style=for-the-badge&logo=github&label=watchers&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-type/watchers)
@@ -17,6 +19,8 @@
 [![Deploy](https://img.shields.io/github/actions/workflow/status/Yeamin-Talukder/jolpai-type/deploy.yml?branch=main&style=for-the-badge&label=deploy&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-type/actions/workflows/deploy.yml)
 [![Last commit](https://img.shields.io/github/last-commit/Yeamin-Talukder/jolpai-type?style=for-the-badge&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-type/commits/main)
 [![Issues](https://img.shields.io/github/issues/Yeamin-Talukder/jolpai-type?style=for-the-badge&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-type/issues)
+[![License: MIT](https://img.shields.io/github/license/Yeamin-Talukder/jolpai-type?style=for-the-badge&color=a3b84a&labelColor=1e2118)](LICENSE)
+[![Made for Bangla typing](https://img.shields.io/badge/made%20for-Bangla%20typing-a3b84a?style=for-the-badge&labelColor=1e2118)](https://yeamin-talukder.github.io/jolpai-type/)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)
@@ -181,6 +185,22 @@ If Jolpai Type helps you type Bangla, please **[give it a star](https://github.c
 
 </div>
 
+## License
+
+Jolpai Type is free and open source under the [MIT License](LICENSE). You can use, change and share the code, as long as the copyright notice stays with it.
+
 ## Author
 
 Made by **[Md Yeamin Talukder](https://github.com/Yeamin-Talukder)**, also the maker of [Jolpai Keyboard](https://github.com/Yeamin-Talukder/jolpai-keyboard), a typing keyboard for phones.
+
+---
+
+<div align="center">
+
+**Made with ❤️ for Bangla typing.** Free Bangla typing practice, Bijoy typing test and Bijoy typing tutor, online.
+
+বাংলা টাইপিংয়ের জন্য ভালোবাসা দিয়ে তৈরি · বিনামূল্যে বাংলা টাইপিং অনুশীলন ও বিজয় টাইপিং শেখা
+
+<a href="https://yeamin-talukder.github.io/jolpai-type/"><b>yeamin-talukder.github.io/jolpai-type</b></a>
+
+</div>
