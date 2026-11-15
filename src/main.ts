@@ -945,7 +945,7 @@ function showView(v: View) {
   document.body.classList.remove('typing');
   window.scrollTo({ top: 0 });
   if (v === 'shared') return; // openShared() draws it once loaded
-  if (v === 'about') { renderAbout(aboutEl); enter(aboutEl); return; }
+  if (v === 'about') { renderAbout(aboutEl, to => showView(to)); enter(aboutEl); return; }
   if (v === 'learn') { learn.show(); return; }
   if (v === 'profile') {
     profileView.lang = settings.lang;
