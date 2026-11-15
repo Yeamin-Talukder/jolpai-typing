@@ -5,7 +5,7 @@ import { firebaseConfig, useEmulators } from './firebase-config';
 import { clearHistory, loadHistory, replaceHistory, type Entry } from './history';
 import { cleanEntry, mergeHistories } from './account-sync';
 
-export interface AccountUser { uid: string; name: string; email: string; photo: string | null }
+export interface AccountUser { uid: string; name: string; email: string; photo: string | null; joined: number | null }
 
 type AuthMod = typeof import('firebase/auth');
 type FsMod = typeof import('firebase/firestore');
@@ -48,7 +48,8 @@ export async function initAccount(onChange: (u: AccountUser | null) => void) {
   const { auth, a } = await load();
   a.onAuthStateChanged(auth, async u => {
     if (u) {
-      user = { uid: u.uid, name: u.displayName || u.email || 'you', email: u.email || '', photo: u.photoURL };
+      const created = Date.parse(u.metadata.creationTime || '');
+      user = { uid: u.uid, name: u.displayName || u.email || 'you', email: u.email || '', photo: u.photoURL, joined: Number.isNaN(created) ? null : created };
       try { await syncHistory(); } catch (err) { console.warn('Could not sync history with your account', err); }
     } else {
       // Signed out: remove this person's results from the browser so the

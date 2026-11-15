@@ -5,9 +5,17 @@ import { BANGLA_WORDS } from './words-bn';
 import { bijoyToUnicode, unicodeToSegments, usKey } from './bijoy';
 import { Keyboard } from './keyboard';
 import { lessonItems, lessonsFor } from './lessons';
-import { addEntry, clearHistory, newId, renderHistory, type Entry } from './history';
+import { addEntry, clearHistory, newId, type Entry } from './history';
+import { renderProfile, type ProfileView, type ResultFilter } from './profile';
+import { FONT_PX, DEFAULT_PREFS, loadPrefs, savePrefs } from './prefs';
+import { keySound, previewSound } from './sound';
+import { ON_OFF, onOff, renderSettings, type Section } from './settings-page';
+import { Replay, type KeyEvent } from './replay';
 import { accountsEnabled, clearAccountHistory, currentUser, initAccount, saveToAccount, signIn, signOut, type AccountUser } from './account';
-import { renderThemePicker } from './themes';
+import { THEMES, applyTheme, currentTheme, renderThemePicker } from './themes';
+import { countUp, drawIn, fillIcons, icon, movePills, reduceMotion } from './icons';
+
+fillIcons();
 
 type Mode = 'time' | 'words' | 'passage' | 'lesson';
 type Lang = 'english' | 'bangla';
@@ -29,23 +37,24 @@ const SETTINGS_KEY = 'jolpai-type:settings';
 
 // showKeyboard replaced an older `keyboard` setting that was saved as on for
 // everyone; the on-screen keyboard is now off until the typist turns it on.
-interface Settings { lang: Lang; mode: Mode; amount: number; showKeyboard: boolean }
+interface Settings { lang: Lang; mode: Mode; amount: number; showKeyboard: boolean; showExam: boolean }
 
 function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '');
     const lang: Lang = s.lang === 'bangla' ? 'bangla' : 'english';
     if (['time', 'words', 'passage', 'lesson'].includes(s.mode) && amountsFor(s.mode, lang).includes(s.amount)) {
-      return { lang, mode: s.mode, amount: s.amount, showKeyboard: s.showKeyboard === true };
+      return { lang, mode: s.mode, amount: s.amount, showKeyboard: s.showKeyboard === true, showExam: s.showExam === true };
     }
   } catch { /* first visit or storage blocked */ }
-  return { lang: 'english', mode: 'time', amount: 30, showKeyboard: false };
+  return { lang: 'english', mode: 'time', amount: 30, showKeyboard: false, showExam: false };
 }
 function saveSettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* ignore */ }
 }
 
 const settings = loadSettings();
+const prefs = loadPrefs();
 
 // ---------- DOM ----------
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -59,8 +68,21 @@ const resultEl = $('result');
 const configEl = $('config');
 const amountsEl = $('amounts');
 const hintEl = $('lang-hint');
+const progressEl = $('progress-bar');
 const keyboard = new Keyboard($('keyboard'));
 const showKeyboard = () => settings.showKeyboard;
+const liveWpmEl = $('ls-wpm'), liveAccEl = $('ls-acc'), liveBurstEl = $('ls-burst');
+
+/** Apply the display preferences to the page. */
+function applyPrefs() {
+  wrapEl.style.setProperty('--fs', `${FONT_PX[prefs.fontSize]}px`);
+  wrapEl.classList.toggle('blind', prefs.blind);
+  caretEl.className = `caret ${prefs.caret}${prefs.smoothCaret ? ' smooth' : ''}`;
+  document.body.classList.toggle('no-timer-bar', !prefs.timerBar);
+  liveWpmEl.hidden = !prefs.liveSpeed;
+  liveAccEl.hidden = !prefs.liveAcc;
+  liveBurstEl.hidden = !prefs.liveBurst;
+}
 
 // ---------- words ----------
 // Every word is typed as a sequence of keys. For English the keys are the
@@ -108,6 +130,14 @@ let finished = false;
 let startTime = 0;
 let tick = 0;
 let lineOffset = 0;
+let finishedAt = 0;   // when the result appeared; keys right after it are ignored
+let wordStart = 0;    // when the current word's first key was pressed, for burst speed
+let lastBurst = 0;
+let keyLog: KeyEvent[] = []; // every key of this test, for the replay
+
+function logKey(key: string, ok: boolean, w: number) {
+  keyLog.push({ t: Math.round(performance.now() - startTime), key, ok, w, text: typed[w], cur: current });
+}
 
 // per-keystroke accuracy
 let keyCorrect = 0;
@@ -151,19 +181,21 @@ function renderConfig() {
   hintEl.hidden = !bn;
   const kbBtn = configEl.querySelector<HTMLButtonElement>('[data-toggle="keyboard"]')!;
   kbBtn.classList.toggle('active', showKeyboard());
+  configEl.querySelector('[data-toggle="exam"]')!.classList.toggle('active', settings.showExam);
   keyboard.render(settings.lang);
   $('keyboard').hidden = !showKeyboard();
+  movePills(configEl);
 }
 
 configEl.addEventListener('click', e => {
   const b = (e.target as HTMLElement).closest('button');
   if (!b || b.disabled) return;
-  if (b.dataset.toggle === 'keyboard') {
-    settings.showKeyboard = !settings.showKeyboard;
+  if (b.dataset.toggle) {
+    if (b.dataset.toggle === 'keyboard') settings.showKeyboard = !settings.showKeyboard;
+    else settings.showExam = !settings.showExam;
     saveSettings();
     renderConfig();
-    updateCaret();
-    focusInput();
+    if (!finished) { updateCaret(); focusInput(); }
     return;
   } else if (b.dataset.lang) {
     settings.lang = b.dataset.lang as Lang;
@@ -179,12 +211,26 @@ configEl.addEventListener('click', e => {
   } else return;
   saveSettings();
   renderConfig();
+  // on the result screen a new choice waits for "next test", so a stray
+  // click never throws the result away
+  if (finished && !resultEl.hidden) { noteNext(); return; }
   reset();
 });
 
-function reset() {
+/** Tell the typist the changed settings start with the next test. */
+function noteNext() {
+  const note = $('next-note');
+  note.textContent = `next test: ${testLabel()} · ${settings.lang === 'bangla' ? 'বাংলা' : 'english'}`;
+  note.hidden = false;
+  enter(note);
+}
+
+/** Start a new test, or the same words again when `repeat` is set. */
+function reset(repeat = false) {
   clearInterval(tick);
-  if (settings.mode === 'lesson') {
+  if (repeat && words.length) {
+    // keep the same words (a time test keeps the extra ones it added too)
+  } else if (settings.mode === 'lesson') {
     const lesson = lessonsFor(settings.lang)[settings.amount];
     words = lessonItems(lesson, settings.lang, LESSON_LENGTH).map(makeWord);
   } else {
@@ -197,6 +243,13 @@ function reset() {
   samples = [];
   secKeys = secErrors = 0;
   lineOffset = 0;
+  wordStart = 0;
+  lastBurst = 0;
+  keyLog = [];
+  replayEl.hidden = true;
+  $('replay-btn').classList.remove('active');
+  replay.stop();
+  $('next-note').hidden = true;
   wordsEl.style.transform = 'translateY(0)';
   inputEl.value = '';
   document.body.classList.remove('typing');
@@ -205,14 +258,31 @@ function reset() {
   configEl.classList.remove('faded');
   renderAllWords();
   updateLive();
+  setProgress(0, false);
+  enter(wrapEl);
   focusInput();
   requestAnimationFrame(updateCaret);
 }
 
+/** Replay an element's entrance animation. */
+function enter(el: HTMLElement) {
+  el.classList.remove('enter');
+  void el.offsetWidth;
+  el.classList.add('enter');
+}
+
+/** Fill the thin progress bar; timed tests glide over the next second. */
+function setProgress(frac: number, glide: boolean) {
+  progressEl.style.transition = glide && !reduceMotion() ? 'width 1s linear' : 'width .2s ease';
+  progressEl.style.width = `${Math.min(100, frac * 100)}%`;
+}
+
 // ---------- rendering ----------
 function wordHTML(i: number): string {
-  const w = words[i];
-  const t = typed[i];
+  return wordHTMLFor(words[i], typed[i]);
+}
+
+function wordHTMLFor(w: Word, t: string): string {
   let html = '';
   for (const s of w.segs) {
     let cls = '';
@@ -280,6 +350,8 @@ function updateCaret() {
   // and layout offsets are not affected by the scroll transform
   const x = letter.offsetLeft + (atEnd ? letter.offsetWidth : 0);
   const h = letter.offsetHeight;
+  // block and underline carets cover the next letter (or one letter's width at the end)
+  const cw = atEnd ? Math.min(letter.offsetWidth, h * 0.6) : letter.offsetWidth;
   const lineH = parseFloat(getComputedStyle(wordEl).lineHeight) || h;
 
   // keep the active line as the second visible line (three lines shown)
@@ -291,8 +363,19 @@ function updateCaret() {
   }
   const y = top - lineOffset + (lineH - h) / 2;
 
-  caretEl.style.height = `${h * 0.85}px`;
-  caretEl.style.transform = `translate(${x - 1}px, ${y + h * 0.08}px)`;
+  if (prefs.caret === 'block') {
+    caretEl.style.width = `${cw}px`;
+    caretEl.style.height = `${h * 0.85}px`;
+    caretEl.style.transform = `translate(${x}px, ${y + h * 0.08}px)`;
+  } else if (prefs.caret === 'underline') {
+    caretEl.style.width = `${cw}px`;
+    caretEl.style.height = '3px';
+    caretEl.style.transform = `translate(${x}px, ${y + h * 0.9}px)`;
+  } else {
+    caretEl.style.width = '';
+    caretEl.style.height = `${h * 0.85}px`;
+    caretEl.style.transform = `translate(${x - 1}px, ${y + h * 0.08}px)`;
+  }
   caretEl.classList.toggle('blink', !started);
   if (showKeyboard()) keyboard.hint(nextKey());
 }
@@ -309,7 +392,9 @@ inputEl.addEventListener('blur', () => wrapEl.classList.add('blurred'));
 let tabArmed = false;
 
 document.addEventListener('keydown', e => {
-  if (!historyEl.hidden) { if (e.key === 'Escape') showHistory(false); return; }
+  if (view !== 'test') { if (e.key === 'Escape') showView('test'); return; }
+  // keys still flying when the test ends must not start a new one
+  if (finished && performance.now() - finishedAt < 700) { if (e.key !== 'Escape') e.preventDefault(); return; }
   if (e.key === 'Tab') { e.preventDefault(); tabArmed = true; $('restart').focus(); return; }
   if (e.key === 'Enter' && tabArmed) { e.preventDefault(); tabArmed = false; reset(); return; }
   tabArmed = false;
@@ -352,6 +437,7 @@ function startIfNeeded() {
   document.body.classList.add('typing');
   configEl.classList.add('faded');
   tick = window.setInterval(onSecond, 1000);
+  if (timed()) setProgress(1 / settings.amount, true);
 }
 
 function typeChar(ch: string) {
@@ -363,7 +449,13 @@ function typeChar(ch: string) {
   keyTotal++; secKeys++;
   if (ok) keyCorrect++; else secErrors++;
   if (showKeyboard()) keyboard.flash(ch, ok);
+  keySound(prefs, ok);
+  if (!pos) wordStart = performance.now();
+  updateLiveAcc();
+  // stop on error (letter): a wrong key counts as a mistake but is not typed
+  if (!ok && prefs.stopOnError === 'letter') { logKey(ch, false, current); shakeCaret(); return; }
   typed[current] += ch;
+  logKey(ch, ok, current);
   renderWord(current);
   updateCaret();
 
@@ -378,8 +470,17 @@ function space() {
   keyTotal++; secKeys++;
   if (ok) keyCorrect++; else secErrors++;
   if (showKeyboard()) keyboard.flash(' ', ok);
-  if (current === words.length - 1) { finish(); return; }
+  keySound(prefs, ok);
+  updateLiveAcc();
+  // stop on error (word): the word has to be right before moving on
+  if (!ok && prefs.stopOnError === 'word') { logKey(' ', false, current); shakeCaret(); return; }
+  if (wordStart) {
+    lastBurst = wpmFrom(typed[current].length + 1, (performance.now() - wordStart) / 1000);
+    liveBurstEl.querySelector('b')!.textContent = String(Math.round(lastBurst));
+  }
+  if (current === words.length - 1) { logKey(' ', ok, current); finish(); return; }
   current++;
+  logKey(' ', ok, current - 1);
   if (settings.mode === 'time' && words.length - current < 40) appendWords(50);
   markWords();
   updateCaret();
@@ -387,11 +488,14 @@ function space() {
 }
 
 function backspace(wholeWord: boolean) {
+  if (prefs.confidence === 'max') { shakeCaret(); return; } // no corrections at all
   if (!typed[current].length) {
     // step back only into a previous word that has a mistake
-    if (current > 0 && !isCorrect(current - 1)) {
+    // (confidence mode keeps finished words finished)
+    if (current > 0 && !isCorrect(current - 1) && prefs.confidence === 'off') {
       current--;
       if (wholeWord) typed[current] = '';
+      logKey('backspace', true, current);
       renderWord(current);
       updateCaret();
       updateLive();
@@ -399,8 +503,16 @@ function backspace(wholeWord: boolean) {
     return;
   }
   typed[current] = wholeWord ? '' : typed[current].slice(0, -1);
+  if (started) logKey('backspace', true, current);
   renderWord(current);
   updateCaret();
+}
+
+/** A small shake to show a key was refused. */
+function shakeCaret() {
+  caretEl.classList.remove('refused');
+  void caretEl.offsetWidth;
+  caretEl.classList.add('refused');
 }
 
 function appendWords(n: number) {
@@ -454,20 +566,38 @@ function onSecond() {
   samples.push({ wpm: wpmFrom(c.correctWordChars, sec), raw: wpmFrom(secKeys, 1), errors: secErrors });
   secKeys = secErrors = 0;
   if (timed() && sec >= settings.amount - 0.05) finish();
-  else updateLive();
+  else {
+    updateLive();
+    liveWpmEl.querySelector('b')!.textContent = String(Math.round(wpmFrom(c.correctWordChars, sec)));
+    if (timed()) setProgress((Math.round(sec) + 1) / settings.amount, true);
+  }
+}
+
+function updateLiveAcc() {
+  liveAccEl.querySelector('b')!.textContent = `${keyTotal ? Math.round((keyCorrect / keyTotal) * 100) : 100}%`;
 }
 
 function updateLive() {
+  if (!started) {
+    liveWpmEl.querySelector('b')!.textContent = '0';
+    liveAccEl.querySelector('b')!.textContent = '100%';
+    liveBurstEl.querySelector('b')!.textContent = '0';
+  }
   if (timed()) {
-    liveEl.textContent = String(started ? Math.max(0, Math.round(settings.amount - elapsedSec())) : settings.amount);
+    const left = started ? Math.max(0, Math.round(settings.amount - elapsedSec())) : settings.amount;
+    liveEl.textContent = settings.amount >= 120 && left >= 60 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : String(left);
+    liveEl.classList.toggle('warn', started && left <= 5);
   } else {
     liveEl.textContent = `${current}/${words.length}`;
+    liveEl.classList.remove('warn');
+    setProgress(current / words.length, false);
   }
 }
 
 function finish() {
   if (finished) return;
   finished = true;
+  finishedAt = performance.now();
   clearInterval(tick);
   const sec = timed() ? Math.min(elapsedSec(), settings.amount) : elapsedSec();
   if (secKeys > 0 && sec - samples.length > 0.2) {
@@ -482,6 +612,8 @@ function finish() {
   const acc = keyTotal ? (keyCorrect / keyTotal) * 100 : 0;
   if (samples.length) samples[samples.length - 1].wpm = wpm;
   showResult({ wpm, raw, acc, sec, c });
+  const testWords = words;
+  replay.load(keyLog, testWords.length, settings.lang, (i, t) => wordHTMLFor(testWords[i], t));
 
   // net speed: gross minus wrong words per minute
   let attempted = 0, wrong = 0;
@@ -491,7 +623,8 @@ function finish() {
     if (!isCorrect(i)) wrong++;
   }
   const net = sec > 0 ? Math.max(0, raw - wrong / (sec / 60)) : 0;
-  if (settings.mode === 'lesson') $('exam').innerHTML = ''; // lessons are practice, not an exam
+  // the job exam check is optional; lessons are practice, not an exam
+  if (!settings.showExam || settings.mode === 'lesson') $('exam').innerHTML = '';
   else showExam(raw, net, attempted, wrong);
 
   // save it, unless it was too short to mean anything
@@ -505,7 +638,7 @@ function finish() {
     const { previousBest } = addEntry(entry);
     saveToAccount(entry);
     if (previousBest !== null && Math.round(wpm) > Math.round(previousBest)) {
-      pb.textContent = `new personal best · was ${Math.round(previousBest)}`;
+      $('r-pb-text').textContent = `new personal best · was ${Math.round(previousBest)}`;
       pb.hidden = false;
     }
   }
@@ -533,7 +666,7 @@ function showExam(gross: number, net: number, attempted: number, wrong: number) 
   const rows = POSTS.map(p => {
     const need = p[lang];
     const ok = net >= need;
-    return `<li class="${ok ? 'pass' : 'fail'}"><span class="mark">${ok ? '✓' : '✗'}</span>${p.name}<span class="need">needs ${need} wpm</span></li>`;
+    return `<li class="${ok ? 'pass' : 'fail'}"><span class="mark">${icon(ok ? 'check' : 'x', 14)}</span>${p.name}<span class="need">needs ${need} wpm</span></li>`;
   }).join('');
   $('exam').innerHTML = `
     <div class="exam-nums">
@@ -559,18 +692,20 @@ function showResult(r: { wpm: number; raw: number; acc: number; sec: number; c: 
   resultEl.hidden = false;
   document.body.classList.remove('typing');
   configEl.classList.remove('faded');
-  $('r-wpm').textContent = String(Math.round(r.wpm));
-  $('r-acc').textContent = `${Math.round(r.acc)}%`;
-  $('r-raw').textContent = String(Math.round(r.raw));
+  countUp($('r-wpm'), r.wpm);
+  countUp($('r-acc'), r.acc, '%');
+  countUp($('r-raw'), r.raw);
   $('r-chars').textContent = `${r.c.correct}/${r.c.incorrect}/${r.c.extra}/${timed() ? 0 : r.c.missed}`;
-  $('r-cons').textContent = `${Math.round(consistency(samples.map(s => s.raw)))}%`;
+  countUp($('r-cons'), consistency(samples.map(s => s.raw)), '%');
   $('r-time').textContent = `${Math.round(r.sec)}s`;
   $('r-type').innerHTML = `${testLabel()}<br>${settings.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english'}`;
-  drawChart();
-  $('next').focus();
+  enter(resultEl);
+  drawChart(true);
+  // focus the result itself, not a button, so a stray Space or Enter does nothing
+  resultEl.focus({ preventScroll: true });
 }
 
-function drawChart() {
+function drawChart(animate = false) {
   const svg = $('chart') as unknown as SVGSVGElement;
   const W = svg.clientWidth || 800;
   const H = svg.clientHeight || 200;
@@ -597,53 +732,178 @@ function drawChart() {
     const ey = padT + (1 - s.errors / maxE) * (H - padT - padB) * 0.9;
     errs += `<g class="err" transform="translate(${x(i)},${ey})"><path d="M-3,-3L3,3M3,-3L-3,3"/><title>${s.errors} error${s.errors > 1 ? 's' : ''} in second ${i + 1}</title></g>`;
   });
-  svg.innerHTML = `${g}<path d="${line('raw')}" class="raw"/><path d="${line('wpm')}" class="wpm"/>${errs}`;
-}
-
-// ---------- history page ----------
-const historyEl = $('history');
-let historyLang: 'english' | 'bangla' = settings.lang;
-
-function drawHistory() {
-  const u = currentUser();
-  renderHistory(historyEl, historyLang, u ? u.email || u.name : null);
-}
-
-function showHistory(open: boolean) {
-  historyEl.hidden = !open;
-  configEl.hidden = open;
-  $('nav-history').classList.toggle('active', open);
-  if (open) {
-    clearInterval(tick);
-    testEl.hidden = true;
-    resultEl.hidden = true;
-    historyLang = settings.lang;
-    drawHistory();
-  } else {
-    reset();
+  const base = y(0).toFixed(1);
+  const area = `${line('wpm')}L${x(n - 1).toFixed(1)},${base}L${x(0).toFixed(1)},${base}Z`;
+  svg.innerHTML = `<defs><linearGradient id="wpm-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="fill-top"/><stop offset="1" class="fill-bottom"/></linearGradient></defs>`
+    + `${g}<path d="${area}" class="area"/><path d="${line('raw')}" class="raw"/><path d="${line('wpm')}" class="wpm"/>${errs}`;
+  if (animate) {
+    drawIn(svg.querySelector<SVGPathElement>('.raw'));
+    drawIn(svg.querySelector<SVGPathElement>('.wpm'));
   }
 }
 
-$('nav-history').addEventListener('click', () => showHistory(historyEl.hidden));
-$('nav-test').addEventListener('click', () => { if (!historyEl.hidden) showHistory(false); else reset(); });
-historyEl.addEventListener('click', e => {
+// ---------- pages: test, profile, settings ----------
+type View = 'test' | 'profile' | 'settings';
+let view: View = 'test';
+const profileEl = $('history');
+const settingsEl = $('settings');
+const profileView: ProfileView = { lang: settings.lang, filter: 'all', shown: 25 };
+
+function profileUser() {
+  const u = currentUser();
+  return u ? { name: u.name, email: u.email, photo: u.photo, joined: u.joined } : null;
+}
+
+function drawProfile() {
+  renderProfile(profileEl, profileView, profileUser());
+  movePills(profileEl);
+}
+
+function showView(v: View) {
+  view = v;
+  profileEl.hidden = v !== 'profile';
+  settingsEl.hidden = v !== 'settings';
+  configEl.hidden = v !== 'test';
+  $('nav-test').classList.toggle('active', v === 'test');
+  $('nav-history').classList.toggle('active', v === 'profile');
+  $('nav-settings').classList.toggle('active', v === 'settings');
+  if (v === 'test') { reset(); return; }
+  clearInterval(tick);
+  replay.stop();
+  testEl.hidden = true;
+  resultEl.hidden = true;
+  document.body.classList.remove('typing');
+  window.scrollTo({ top: 0 });
+  if (v === 'profile') {
+    profileView.lang = settings.lang;
+    profileView.shown = 25;
+    drawProfile();
+    enter(profileEl);
+    drawIn(profileEl.querySelector<SVGPathElement>('.h-chart .wpm'), 1100);
+  } else {
+    refreshSettings();
+    enter(settingsEl);
+    movePills(settingsEl);
+  }
+}
+
+$('nav-history').addEventListener('click', () => showView(view === 'profile' ? 'test' : 'profile'));
+$('nav-settings').addEventListener('click', () => showView(view === 'settings' ? 'test' : 'settings'));
+$('nav-test').addEventListener('click', () => showView('test'));
+$('nav-test').classList.add('active');
+profileEl.addEventListener('click', e => {
   const b = (e.target as HTMLElement).closest('button');
   if (!b) return;
   if (b.dataset.hlang) {
-    historyLang = b.dataset.hlang as 'english' | 'bangla';
-    drawHistory();
+    profileView.lang = b.dataset.hlang as Lang;
+    drawProfile();
+  } else if (b.dataset.filter) {
+    profileView.filter = b.dataset.filter as ResultFilter;
+    profileView.shown = 25;
+    drawProfile();
+  } else if (b.id === 'h-more') {
+    profileView.shown += 25;
+    drawProfile();
+  } else if (b.id === 'p-sign-in') {
+    signIn().catch(err => alert(`Sign-in failed: ${(err as Error).message}`));
   } else if (b.id === 'h-clear') {
     const where = currentUser() ? 'from your account and this browser' : 'from this browser';
     if (!confirm(`Delete all saved test results ${where}? This cannot be undone.`)) return;
     clearHistory();
-    drawHistory();
+    drawProfile();
     clearAccountHistory().catch(err => alert(`Could not delete the results in your account: ${err.message || err}`));
   }
 });
 
-$('restart').addEventListener('click', reset);
-$('next').addEventListener('click', reset);
-window.addEventListener('resize', () => { if (!finished) updateCaret(); else drawChart(); });
+// ---------- settings page ----------
+type BoolPref = 'liveSpeed' | 'liveAcc' | 'liveBurst' | 'timerBar' | 'smoothCaret' | 'blind' | 'errorSound';
+type PickPref = 'fontSize' | 'caret' | 'stopOnError' | 'confidence' | 'sound';
+const choices = (...xs: [string, string][]) => xs.map(([value, label]) => ({ value, label }));
+const bool = (key: BoolPref) =>
+  ({ choices: ON_OFF, get: () => onOff(prefs[key]), set: (v: string) => { prefs[key] = v === 'on'; } });
+const pick = (key: PickPref) =>
+  ({ get: () => prefs[key] as string, set: (v: string) => { (prefs as unknown as Record<string, string>)[key] = v; } });
+
+const SECTIONS: Section[] = [
+  { title: 'behaviour', options: [
+    { id: 'stopOnError', icon: 'shield', title: 'stop on error',
+      desc: 'Letter: a wrong key is counted but not typed. Word: you cannot move on until the word is right.',
+      choices: choices(['off', 'off'], ['letter', 'letter'], ['word', 'word']), ...pick('stopOnError') },
+    { id: 'confidence', icon: 'backspace', title: 'confidence mode',
+      desc: 'On: you cannot go back to fix an earlier word. Max: backspace is turned off completely.',
+      choices: choices(['off', 'off'], ['on', 'on'], ['max', 'max']), ...pick('confidence') },
+    { id: 'blind', icon: 'eye', title: 'blind mode', desc: 'Mistakes are not shown while you type; you see them on the result.', ...bool('blind') },
+    { id: 'exam', icon: 'exam', title: 'exam check', desc: 'Show the government job typing speed check on the result.',
+      choices: ON_OFF, get: () => onOff(settings.showExam), set: v => { settings.showExam = v === 'on'; } },
+  ] },
+  { title: 'live stats', options: [
+    { id: 'liveSpeed', icon: 'gauge', title: 'live speed', desc: 'Your speed in wpm while you type, updated every second.', ...bool('liveSpeed') },
+    { id: 'liveAcc', icon: 'target', title: 'live accuracy', desc: 'The share of keys you pressed correctly so far.', ...bool('liveAcc') },
+    { id: 'liveBurst', icon: 'zap', title: 'live burst', desc: 'How fast you typed the last word, in wpm.', ...bool('liveBurst') },
+    { id: 'timerBar', icon: 'bar', title: 'progress bar', desc: 'A thin bar next to the timer that fills as the test goes on.', ...bool('timerBar') },
+  ] },
+  { title: 'appearance', options: [
+    { id: 'fontSize', icon: 'font', title: 'text size', desc: 'Size of the words you type.',
+      choices: choices(['s', 'small'], ['m', 'medium'], ['l', 'large'], ['xl', 'extra large']), ...pick('fontSize') },
+    { id: 'caret', icon: 'cursor', title: 'caret style', desc: 'The marker that shows where you are typing.',
+      choices: choices(['line', 'line'], ['block', 'block'], ['underline', 'underline'], ['off', 'off']), ...pick('caret') },
+    { id: 'smoothCaret', icon: 'cursor', title: 'smooth caret', desc: 'The caret glides from letter to letter instead of jumping.', ...bool('smoothCaret') },
+    { id: 'keyboard', icon: 'keyboard', title: 'on-screen keyboard', desc: 'Show the keyboard under the words, with the next key lit up.',
+      choices: ON_OFF, get: () => onOff(settings.showKeyboard), set: v => { settings.showKeyboard = v === 'on'; } },
+    { id: 'theme', icon: 'palette', title: 'theme', desc: 'Colours for the whole site.',
+      choices: THEMES.map(t => ({ value: t.id, label: t.name })), get: currentTheme, set: v => { applyTheme(v); drawThemes(); } },
+  ] },
+  { title: 'sound', options: [
+    { id: 'sound', icon: 'volume', title: 'key sound', desc: 'A sound on every key press. Pick one to hear it.',
+      choices: choices(['off', 'off'], ['click', 'click'], ['pop', 'pop'], ['typewriter', 'typewriter']), ...pick('sound') },
+    { id: 'errorSound', icon: 'volume', title: 'error sound', desc: 'A low buzz when you press a wrong key.', ...bool('errorSound') },
+  ],
+  extra: `<div class="s-row s-reset"><div class="s-text"><div class="s-title">${icon('restart', 16)}reset settings</div><p>Put every setting on this page back to how it started. Your results are kept.</p></div><button id="s-reset" class="btn danger">${icon('restart', 15)}reset settings</button></div>` },
+];
+
+const refreshSettings = renderSettings(settingsEl, SECTIONS, id => {
+  savePrefs(prefs);
+  if (id === 'keyboard' || id === 'exam') { saveSettings(); renderConfig(); }
+  if (id === 'sound') previewSound(prefs);
+  if (id === 'errorSound' && prefs.errorSound) keySound(prefs, false);
+  applyPrefs();
+});
+settingsEl.addEventListener('click', e => {
+  if (!(e.target as HTMLElement).closest('#s-reset')) return;
+  if (!confirm('Reset all settings to how they started? Your results are kept.')) return;
+  Object.assign(prefs, DEFAULT_PREFS);
+  savePrefs(prefs);
+  settings.showKeyboard = settings.showExam = false;
+  saveSettings();
+  applyTheme('jolpai');
+  drawThemes();
+  renderConfig();
+  applyPrefs();
+  refreshSettings();
+});
+
+// ---------- replay ----------
+const replayEl = $('replay');
+const replay = new Replay(replayEl);
+$('replay-btn').addEventListener('click', () => {
+  replayEl.hidden = !replayEl.hidden;
+  $('replay-btn').classList.toggle('active', !replayEl.hidden);
+  if (replayEl.hidden) { replay.stop(); return; }
+  enter(replayEl);
+  replayEl.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'nearest' });
+  replay.play();
+});
+
+$('restart').addEventListener('click', () => reset());
+$('next').addEventListener('click', () => reset());
+$('repeat').addEventListener('click', () => reset(true));
+$('to-history').addEventListener('click', () => showView('profile'));
+window.addEventListener('resize', () => {
+  movePills();
+  if (!finished) updateCaret(); else drawChart();
+});
+// pills measure text, so place them again once the web fonts arrive
+document.fonts?.ready.then(() => { movePills(); updateCaret(); });
 
 // ---------- account ----------
 const accountEl = $('account');
@@ -652,7 +912,7 @@ function renderAccount(u: AccountUser | null) {
   if (!accountsEnabled()) { accountEl.hidden = true; return; }
   accountEl.hidden = false;
   if (!u) {
-    accountEl.innerHTML = `<button id="sign-in" class="sign-in" title="Sign in to save your progress on every device">sign in</button>`;
+    accountEl.innerHTML = `<button id="sign-in" class="sign-in" title="Sign in to save your progress on every device">${icon('login', 15)}<span>sign in</span></button>`;
     return;
   }
   const initial = esc((u.name || u.email || '?').trim().charAt(0).toUpperCase());
@@ -664,8 +924,8 @@ function renderAccount(u: AccountUser | null) {
     <div id="account-menu" class="account-menu" hidden>
       <div class="am-name">${esc(u.name)}</div>
       <div class="am-email">${esc(u.email)}</div>
-      <p class="am-note">Your results are saved to your account.</p>
-      <button id="sign-out" class="am-out">sign out</button>
+      <p class="am-note">${icon('cloud', 14)}Your results are saved to your account.</p>
+      <button id="sign-out" class="am-out">${icon('logout', 14)}sign out</button>
     </div>`;
 }
 
@@ -674,7 +934,8 @@ accountEl.addEventListener('click', async e => {
   if (!b) return;
   const menu = $('account-menu') as HTMLElement | null;
   if (b.id === 'sign-in') {
-    b.textContent = 'signing in…';
+    b.classList.add('busy');
+    b.querySelector('span')!.textContent = 'signing in…';
     try { await signIn(); } catch (err) { alert(`Sign-in failed: ${(err as Error).message}`); }
     renderAccount(currentUser());
   } else if (b.id === 'account-btn' && menu) {
@@ -692,12 +953,17 @@ document.addEventListener('click', e => {
 renderAccount(null);
 initAccount(u => {
   renderAccount(u);
-  if (!historyEl.hidden) drawHistory();
+  if (view === 'profile') drawProfile();
 }).catch(err => console.warn('Accounts are unavailable', err));
 
-renderThemePicker($('themes'), () => {
-  if (!historyEl.hidden) drawHistory();
-  focusInput();
+const drawFooterThemes = renderThemePicker($('themes'), () => {
+  if (view === 'profile') drawProfile();
+  if (view === 'settings') refreshSettings();
+  if (view === 'test' && !finished) focusInput();
 });
+/** Redraw the theme pickers after the theme changed elsewhere. */
+function drawThemes() { drawFooterThemes(); }
+
+applyPrefs();
 renderConfig();
 reset();

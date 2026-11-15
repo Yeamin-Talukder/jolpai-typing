@@ -23,54 +23,53 @@
         </a>
         <nav class="nav" aria-label="Main">
           <div id="account" class="account" hidden></div>
-          <button id="nav-test" title="Typing test (Esc)" aria-label="Typing test">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M20 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zM5 8h2v2H5V8zm0 3h2v2H5v-2zm11 5H8v-2h8v2zm0-3h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
+          <button id="nav-test" title="Typing test (Esc)" aria-label="Typing test"><i data-icon="keyboard" data-size="20"></i>
           </button>
-          <button id="nav-history" title="Your history and personal bests" aria-label="History">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M4 19h16v2H2V3h2v16zm3-2V10h3v7H7zm5 0V6h3v11h-3zm5 0v-4h3v4h-3z"/></svg>
+          <button id="nav-history" title="Your profile: personal bests, stats and history" aria-label="Profile"><i data-icon="user" data-size="20"></i>
           </button>
+          <button id="nav-settings" title="Settings" aria-label="Settings"><i data-icon="gear" data-size="20"></i></button>
         </nav>
       </header>
 
       <main>
         <section id="config" class="config" aria-label="Test settings">
-          <div class="group" data-group="lang">
+          <div class="group seg" data-group="lang">
             <button data-lang="english" class="active">english</button>
             <button data-lang="bangla" title="Bangla with the Bijoy 52 keyboard layout">বাংলা (বিজয়)</button>
           </div>
           <span class="sep"></span>
-          <div class="group" data-group="mode">
-            <button data-mode="time" class="active">time</button>
-            <button data-mode="words">words</button>
-            <button data-mode="passage" title="Exam-style paragraph against the clock">passage</button>
-            <button data-mode="lesson" title="Learn the keyboard row by row">lessons</button>
+          <div class="group seg" data-group="mode">
+            <button data-mode="time" class="active"><i data-icon="clock"></i>time</button>
+            <button data-mode="words"><i data-icon="words"></i>words</button>
+            <button data-mode="passage" title="Exam-style paragraph against the clock"><i data-icon="passage"></i>passage</button>
+            <button data-mode="lesson" title="Learn the keyboard row by row"><i data-icon="lessons"></i>lessons</button>
           </div>
           <span class="sep"></span>
-          <div class="group" data-group="amount" id="amounts"></div>
+          <div class="group seg" data-group="amount" id="amounts"></div>
           <span class="sep"></span>
-          <div class="group">
-            <button data-toggle="keyboard" title="Show or hide the on-screen keyboard">keyboard</button>
+          <div class="group toggles">
+            <button data-toggle="keyboard" title="Show or hide the on-screen keyboard"><i data-icon="keyboard"></i>keyboard</button>
+            <button data-toggle="exam" title="Show or hide the government job exam check on the result"><i data-icon="exam"></i>exam check</button>
           </div>
         </section>
 
         <section id="test" class="test">
-          <div id="live" class="live" aria-live="off"></div>
+          <div class="test-top"><div id="live" class="live" aria-live="off"></div><div class="live-stats" aria-hidden="true"><span id="ls-wpm" title="live speed"><b>0</b> wpm</span><span id="ls-acc" title="live accuracy"><b>100%</b> acc</span><span id="ls-burst" title="speed of the last word"><b>0</b> burst</span></div><div class="progress" aria-hidden="true"><div id="progress-bar" class="progress-bar"></div></div></div>
           <div id="words-wrap" class="words-wrap">
             <div id="words" class="words"></div>
             <div id="caret" class="caret"></div>
-            <div id="focus-hint" class="focus-hint">click here or press any key to focus</div>
+            <div id="focus-hint" class="focus-hint"><span><i data-icon="pointer"></i>click here or press any key to focus</span></div>
           </div>
-          <p id="lang-hint" class="lang-hint" hidden>Bijoy layout: type with your keys as if Bijoy were on. Turn off Bijoy or Avro software first, Jolpai Type converts the keys itself.</p>
+          <p id="lang-hint" class="lang-hint" hidden><i data-icon="info" data-size="14"></i>Bijoy layout: type with your keys as if Bijoy were on. Turn off Bijoy or Avro software first, Jolpai Type converts the keys itself.</p>
           <div id="keyboard" class="keyboard" aria-hidden="true"></div>
           <input id="input" class="hidden-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Typing input" />
-          <button id="restart" class="restart" aria-label="Restart test" title="Restart (Tab + Enter)">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>
+          <button id="restart" class="restart" aria-label="Restart test" title="Restart (Tab + Enter)"><i data-icon="restart" data-size="20"></i>
           </button>
         </section>
 
-        <section id="result" class="result" hidden>
+        <section id="result" class="result" hidden tabindex="-1" aria-label="Test result">
           <div class="stats-main">
-            <div><div class="label">wpm</div><div class="big" id="r-wpm">0</div><div id="r-pb" class="pb" hidden></div></div>
+            <div><div class="label">wpm</div><div class="big" id="r-wpm">0</div><div id="r-pb" class="pb" hidden><i data-icon="trophy" data-size="14"></i><span id="r-pb-text"></span></div></div>
             <div><div class="label">acc</div><div class="big" id="r-acc">0%</div></div>
           </div>
           <div class="chart-wrap"><svg id="chart" class="chart" preserveAspectRatio="none"></svg></div>
@@ -82,11 +81,17 @@
             <div><div class="label">time</div><div class="val" id="r-time"></div></div>
           </div>
           <div id="exam" class="exam" aria-label="Job exam check"></div>
-          <button id="next" class="restart" aria-label="Next test" title="Next test (Tab + Enter)">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M9 6l6 6-6 6-1.4-1.4L12.2 12 7.6 7.4z"/></svg>
-          </button>
+          <div class="result-actions">
+            <button id="next" class="btn primary" title="Next test (Tab + Enter)"><i data-icon="next"></i>next test</button>
+            <button id="repeat" class="btn" title="Type the same words again"><i data-icon="repeat"></i>repeat</button>
+            <button id="replay-btn" class="btn" title="Watch the test again, key by key"><i data-icon="play"></i>replay</button>
+            <button id="to-history" class="btn" title="Your profile: personal bests, stats and history"><i data-icon="user"></i>profile</button>
+          </div>
+          <p id="next-note" class="next-note" hidden></p>
+          <div id="replay" class="replay" hidden></div>
         </section>
-        <section id="history" class="history" hidden aria-label="History"></section>
+        <section id="history" class="history" hidden aria-label="Profile"></section>
+        <section id="settings" class="settings" hidden aria-label="Settings"></section>
       </main>
 
       <footer class="bottom">

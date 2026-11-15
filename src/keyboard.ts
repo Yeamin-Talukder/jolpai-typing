@@ -89,6 +89,23 @@ export class Keyboard {
     for (const k of this.lit) k.classList.add('next');
   }
 
+  /** Show a key going down, with shift for shifted characters (used by the replay). */
+  press(ch: string, ok: boolean) {
+    const keys: HTMLElement[] = [];
+    if (ch === ' ') keys.push(this.spaceEl);
+    else if (ch === 'backspace') keys.push(this.backEl);
+    else {
+      const k = this.keyEls.get(ch);
+      if (k) keys.push(k);
+      if (/[A-Z~!@#$%^&*()_+{}|:"<>?]/.test(ch)) keys.push(...this.shiftEls);
+    }
+    for (const k of keys) {
+      k.classList.remove('press', 'good', 'bad');
+      void k.offsetWidth; // restart the animation
+      k.classList.add('press', ok ? 'good' : 'bad');
+    }
+  }
+
   /** Brief feedback on a key press. */
   flash(ch: string, ok: boolean) {
     const k = ch === ' ' ? this.spaceEl : this.keyEls.get(ch);

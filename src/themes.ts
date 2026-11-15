@@ -25,6 +25,7 @@ export function applyTheme(id: string) {
   } catch { /* ignore */ }
 }
 
+/** Draw the picker; returns a function that redraws it. */
 export function renderThemePicker(el: HTMLElement, onChange: () => void) {
   const draw = () => {
     const cur = currentTheme();
@@ -35,8 +36,11 @@ export function renderThemePicker(el: HTMLElement, onChange: () => void) {
   el.addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-theme-id]');
     if (!b) return;
-    applyTheme(b.dataset.themeId!);
-    draw();
-    onChange();
+    const change = () => { applyTheme(b.dataset.themeId!); draw(); onChange(); };
+    // cross-fade between themes where the browser supports it
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+    if (doc.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) doc.startViewTransition(change);
+    else change();
   });
+  return draw;
 }

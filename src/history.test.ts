@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
-import { addEntry, clearHistory, loadHistory, renderHistory, type Entry } from './history';
+import { addEntry, clearHistory, loadHistory, type Entry } from './history';
+import { renderProfile, streak } from './profile';
 
 let n = 0;
 const entry = (over: Partial<Entry>): Entry => ({
@@ -34,8 +35,19 @@ describe('history', () => {
     addEntry(entry({ wpm: 31 }));
     addEntry(entry({ lang: 'english', wpm: 55 }));
     const el = document.createElement('div');
-    renderHistory(el, 'bangla');
-    expect(el.textContent).toContain('31');
-    expect(el.textContent).not.toContain('55');
+    renderProfile(el, { lang: 'bangla', filter: 'all', shown: 25 }, null);
+    // look only at the speed figures: dates and times can contain any digits
+    const speeds = [...el.querySelectorAll('.val')].map(v => v.textContent).join(' ');
+    expect(speeds).toContain('31');
+    expect(speeds).not.toContain('55');
+  });
+
+  it('counts a day streak that may end yesterday', () => {
+    const day = 864e5, now = new Date(2026, 10, 15, 12);
+    const at = (daysAgo: number) => entry({ t: now.getTime() - daysAgo * day });
+    expect(streak([], now)).toBe(0);
+    expect(streak([at(0), at(1), at(2), at(4)], now)).toBe(3);
+    expect(streak([at(1), at(2)], now)).toBe(2); // nothing today yet
+    expect(streak([at(2), at(3)], now)).toBe(0);
   });
 });
