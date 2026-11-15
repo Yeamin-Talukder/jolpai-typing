@@ -84,8 +84,21 @@ button:focus-visible { outline: 2px solid var(--main); outline-offset: 3px; bord
 body.typing .top { opacity: .35; }
 body.typing .top:hover { opacity: 1; }
 .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--main); text-decoration: none; border-radius: 10px; }
-.logo { width: 34px; height: 34px; transition: transform .5s var(--spring); transform-origin: 50% 80%; }
-.brand:hover .logo { transform: rotate(-12deg) scale(1.08); }
+.logo { width: 36px; height: 36px; overflow: visible; }
+.logo .lg-olive, .ab-logo .lg-olive { transform-box: fill-box; transform-origin: center; }
+.logo .lg-leaf, .ab-logo .lg-leaf { transform-box: view-box; transform-origin: 21.4px 9.8px; transition: transform .6s var(--spring); }
+.logo, .ab-logo { transition: transform .5s var(--spring); }
+/* hover: someone is typing on the logo, the olive key bounces and the leaf sways, on a loop */
+.brand:hover .logo, .ab-hero-main:hover .ab-logo { animation: lg-bob 2s ease-in-out infinite; }
+.brand:hover .logo .lg-leaf, .ab-hero-main:hover .ab-logo .lg-leaf { animation: lg-wave 1.6s ease-in-out infinite; }
+.brand:hover .logo .lg-olive, .ab-hero-main:hover .ab-logo .lg-olive { animation: lg-press 1s var(--spring) infinite; }
+.brand:hover .logo .lg-tap, .ab-hero-main:hover .ab-logo .lg-tap { animation: lg-tap 2s linear infinite; animation-delay: calc(var(--k) * .2s); }
+@keyframes lg-press { 0%, 100% { transform: none; } 30% { transform: scale(.55); } 55% { transform: scale(1.15); } }
+@keyframes lg-wave { 0%, 100% { transform: rotate(6deg); } 50% { transform: rotate(-18deg); } }
+@keyframes lg-sway { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-14deg); } }
+@keyframes lg-tap { 0% { opacity: 0; } 4% { opacity: .95; } 14% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes lg-bob { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-1.5px) rotate(-3deg); } 75% { transform: translateY(.5px) rotate(2deg); } }
+.brand-type { margin-left: .28em; color: var(--main); transition: color var(--fast); }
 .brand-text { white-space: nowrap; font-size: 28px; font-weight: 600; color: var(--text); letter-spacing: -.5px; position: relative; line-height: 1; transition: color var(--fast); }
 .brand:hover .brand-text { color: var(--main); }
 .brand-sub { position: absolute; top: -14px; left: 0; font-size: 11px; color: var(--sub); font-weight: 400; letter-spacing: 0; }
@@ -942,7 +955,9 @@ main { justify-content: flex-start; padding-top: clamp(8px, 6vh, 72px); }
 }
 @keyframes ab-drift { 0% { transform: translateY(0) rotate(-8deg); opacity: 0; } 15% { opacity: .1; } 85% { opacity: .08; } 100% { transform: translateY(-460px) rotate(10deg); opacity: 0; } }
 .ab-hero-main { position: relative; display: flex; align-items: flex-start; gap: 20px; }
-.ab-logo { width: 72px; height: 72px; flex: none; color: var(--main); animation: logo-sway 4s ease-in-out infinite; transform-origin: 50% 85%; filter: drop-shadow(0 8px 16px color-mix(in srgb, var(--main) 35%, transparent)); }
+.ab-logo { width: 76px; height: 76px; flex: none; color: var(--main); overflow: visible; filter: drop-shadow(0 8px 16px color-mix(in srgb, var(--main) 35%, transparent)); }
+.ab-logo .lg-leaf { animation: lg-sway 3.6s ease-in-out infinite; }
+.ab-logo .lg-olive { animation: lg-press 2.4s var(--spring) infinite 1s; }
 @keyframes logo-sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
 .ab-eyebrow { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--bg); color: var(--main); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
 .ab-hero h1 { margin: 10px 0 0; font-size: clamp(30px, 4vw, 42px); font-weight: 700; color: var(--text); line-height: 1.1; }
@@ -1091,7 +1106,8 @@ button.ab-feat { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .ab-float, .ab-star i { display: none; }
   [data-reveal] { opacity: 1; transform: none; transition: none; }
-  .ab-nums.in .ab-num, .ab-section.in .ab-feat, .ab-path.in .ab-steps li > span, .ab-demo, .ab-demo-keys kbd, .ab-logo { animation: none; }
+  .ab-nums.in .ab-num, .ab-section.in .ab-feat, .ab-path.in .ab-steps li > span, .ab-demo, .ab-demo-keys kbd, .ab-logo .lg-leaf, .ab-logo .lg-olive { animation: none; }
+  .logo, .logo *, .ab-logo, .ab-logo * { animation: none !important; }
   .ab-steps::before { transform: none; transition: none; }
 }
 

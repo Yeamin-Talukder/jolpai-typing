@@ -2,7 +2,7 @@
 // where the code lives. Numbers on the page come from the code itself, so
 // they stay right as the site grows.
 import { unicodeToSegments } from './bijoy';
-import { countUp, icon, type IconName } from './icons';
+import { countUp, icon, logo, type IconName } from './icons';
 import { LESSONS, UNITS } from './learn/course';
 import { THEMES } from './themes';
 
@@ -45,7 +45,7 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
     <section class="ab-hero">
       <div class="ab-float" aria-hidden="true">${[...'কখগঘঙচছজঝটঠডঢণতথদধনপফবভমযরলশসহ'].slice(0, 14).map((c, i) => `<span style="--i:${i};--s:${((i * 7) % 4) * 6};--d:${9 + ((i * 13) % 5) * 1.6}s">${c}</span>`).join('')}</div>
       <div class="ab-hero-main">
-        <svg class="ab-logo" viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="16" cy="18" rx="9" ry="11" fill="currentColor"/><path d="M16 7c2-4 6-5 9-4-1 4-5 6-9 4z" fill="var(--sub)"/></svg>
+        ${logo('ab-logo')}
         <div class="ab-hero-text">
           <span class="ab-eyebrow">${icon('info', 14)}about</span>
           <h1>Jolpai Type <span class="ab-bn">জলপাই টাইপ</span></h1>
