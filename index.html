@@ -30,9 +30,14 @@
             <button data-mode="time" class="active">time</button>
             <button data-mode="words">words</button>
             <button data-mode="passage" title="Exam-style paragraph against the clock">passage</button>
+            <button data-mode="lesson" title="Learn the keyboard row by row">lessons</button>
           </div>
           <span class="sep"></span>
           <div class="group" data-group="amount" id="amounts"></div>
+          <span class="sep"></span>
+          <div class="group">
+            <button data-toggle="keyboard" title="Show the on-screen keyboard">keyboard</button>
+          </div>
         </section>
 
         <section id="test" class="test">
@@ -43,6 +48,7 @@
             <div id="focus-hint" class="focus-hint">click here or press any key to focus</div>
           </div>
           <p id="lang-hint" class="lang-hint" hidden>Bijoy layout: type with your keys as if Bijoy were on. Turn off Bijoy or Avro software first, Jolpai Type converts the keys itself.</p>
+          <div id="keyboard" class="keyboard" aria-hidden="true"></div>
           <input id="input" class="hidden-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Typing input" />
           <button id="restart" class="restart" aria-label="Restart test" title="Restart (Tab + Enter)">
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>

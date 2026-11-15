@@ -3,28 +3,38 @@ import { randomWords } from './words';
 import { BANGLA_PASSAGES, ENGLISH_PASSAGES } from './passages';
 import { BANGLA_WORDS } from './words-bn';
 import { bijoyToUnicode, unicodeToSegments, usKey } from './bijoy';
+import { Keyboard } from './keyboard';
+import { lessonItems, lessonsFor } from './lessons';
 
-type Mode = 'time' | 'words' | 'passage';
+type Mode = 'time' | 'words' | 'passage' | 'lesson';
 type Lang = 'english' | 'bangla';
 
-const AMOUNTS: Record<Mode, number[]> = {
+const AMOUNTS: Record<Exclude<Mode, 'lesson'>, number[]> = {
   time: [15, 30, 60, 120, 300, 600],
   words: [10, 25, 50, 100],
   passage: [60, 120, 300, 600],
 };
 
+/** Choices for the current mode; in lesson mode the amount is the lesson number. */
+function amountsFor(mode: Mode, lang: Lang): number[] {
+  return mode === 'lesson' ? lessonsFor(lang).map((_, i) => i) : AMOUNTS[mode];
+}
+
+const LESSON_LENGTH = 25;
+
 const SETTINGS_KEY = 'jolpai-type:settings';
 
-interface Settings { lang: Lang; mode: Mode; amount: number }
+interface Settings { lang: Lang; mode: Mode; amount: number; keyboard: boolean }
 
 function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '');
-    if (s.mode in AMOUNTS && AMOUNTS[s.mode as Mode].includes(s.amount)) {
-      return { lang: s.lang === 'bangla' ? 'bangla' : 'english', mode: s.mode, amount: s.amount };
+    const lang: Lang = s.lang === 'bangla' ? 'bangla' : 'english';
+    if (['time', 'words', 'passage', 'lesson'].includes(s.mode) && amountsFor(s.mode, lang).includes(s.amount)) {
+      return { lang, mode: s.mode, amount: s.amount, keyboard: s.keyboard !== false };
     }
   } catch { /* first visit or storage blocked */ }
-  return { lang: 'english', mode: 'time', amount: 30 };
+  return { lang: 'english', mode: 'time', amount: 30, keyboard: true };
 }
 function saveSettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* ignore */ }
@@ -44,6 +54,8 @@ const resultEl = $('result');
 const configEl = $('config');
 const amountsEl = $('amounts');
 const hintEl = $('lang-hint');
+const keyboard = new Keyboard($('keyboard'));
+const showKeyboard = () => settings.keyboard || settings.mode === 'lesson';
 
 // ---------- words ----------
 // Every word is typed as a sequence of keys. For English the keys are the
@@ -76,7 +88,7 @@ function pickPassage(): Word[] {
 }
 
 /** Time and passage tests run against the clock. */
-const timed = () => settings.mode !== 'words';
+const timed = () => settings.mode === 'time' || settings.mode === 'passage';
 
 function pickWords(n: number): Word[] {
   return randomWords(n, settings.lang === 'bangla' ? BANGLA_WORDS : undefined).map(makeWord);
@@ -116,9 +128,15 @@ function renderConfig() {
   configEl.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach(b =>
     b.classList.toggle('active', b.dataset.mode === settings.mode));
   amountsEl.innerHTML = '';
-  for (const n of AMOUNTS[settings.mode]) {
+  const lessons = lessonsFor(settings.lang);
+  for (const n of amountsFor(settings.mode, settings.lang)) {
     const b = document.createElement('button');
-    b.textContent = (settings.mode === 'passage' || (settings.mode === 'time' && n >= 300)) ? `${n / 60}m` : String(n);
+    if (settings.mode === 'lesson') {
+      b.textContent = lessons[n].name;
+      b.title = lessons[n].title;
+    } else {
+      b.textContent = (settings.mode === 'passage' || (settings.mode === 'time' && n >= 300)) ? `${n / 60}m` : String(n);
+    }
     b.dataset.amount = String(n);
     b.classList.toggle('active', n === settings.amount);
     amountsEl.appendChild(b);
@@ -126,18 +144,31 @@ function renderConfig() {
   const bn = settings.lang === 'bangla';
   wrapEl.classList.toggle('bn', bn);
   hintEl.hidden = !bn;
+  const kbBtn = configEl.querySelector<HTMLButtonElement>('[data-toggle="keyboard"]')!;
+  kbBtn.classList.toggle('active', showKeyboard());
+  kbBtn.disabled = settings.mode === 'lesson'; // lessons always show it
+  keyboard.render(settings.lang);
+  $('keyboard').hidden = !showKeyboard();
 }
 
 configEl.addEventListener('click', e => {
   const b = (e.target as HTMLElement).closest('button');
   if (!b || b.disabled) return;
-  if (b.dataset.lang) {
+  if (b.dataset.toggle === 'keyboard') {
+    settings.keyboard = !settings.keyboard;
+    saveSettings();
+    renderConfig();
+    updateCaret();
+    focusInput();
+    return;
+  } else if (b.dataset.lang) {
     settings.lang = b.dataset.lang as Lang;
+    if (settings.mode === 'lesson') settings.amount = Math.min(settings.amount, lessonsFor(settings.lang).length - 1);
   } else if (b.dataset.mode) {
     const mode = b.dataset.mode as Mode;
     if (mode !== settings.mode) {
       settings.mode = mode;
-      settings.amount = { time: 30, words: 25, passage: 60 }[mode];
+      settings.amount = { time: 30, words: 25, passage: 60, lesson: 0 }[mode];
     }
   } else if (b.dataset.amount) {
     settings.amount = Number(b.dataset.amount);
@@ -149,7 +180,12 @@ configEl.addEventListener('click', e => {
 
 function reset() {
   clearInterval(tick);
-  words = settings.mode === 'passage' ? pickPassage() : pickWords(settings.mode === 'words' ? settings.amount : 100);
+  if (settings.mode === 'lesson') {
+    const lesson = lessonsFor(settings.lang)[settings.amount];
+    words = lessonItems(lesson, settings.lang, LESSON_LENGTH).map(makeWord);
+  } else {
+    words = settings.mode === 'passage' ? pickPassage() : pickWords(settings.mode === 'words' ? settings.amount : 100);
+  }
   typed = words.map(() => '');
   current = 0;
   started = finished = false;
@@ -215,6 +251,16 @@ function markWords() {
   }
 }
 
+/** What the typist should press next, for the keyboard hint. */
+function nextKey(): string | null {
+  const want = words[current]?.keys;
+  if (want === undefined) return null;
+  const t = typed[current];
+  if (t !== want.slice(0, t.length)) return 'backspace';
+  if (t.length < want.length) return want[t.length];
+  return current === words.length - 1 ? null : 'space';
+}
+
 function updateCaret() {
   const wordEl = wordsEl.children[current] as HTMLElement | undefined;
   if (!wordEl) return;
@@ -244,6 +290,7 @@ function updateCaret() {
   caretEl.style.height = `${h * 0.85}px`;
   caretEl.style.transform = `translate(${x - 1}px, ${y + h * 0.08}px)`;
   caretEl.classList.toggle('blink', !started);
+  if (showKeyboard()) keyboard.hint(nextKey());
 }
 
 // ---------- input ----------
@@ -310,6 +357,7 @@ function typeChar(ch: string) {
   const ok = pos < want.length && want[pos] === ch;
   keyTotal++; secKeys++;
   if (ok) keyCorrect++; else secErrors++;
+  if (showKeyboard()) keyboard.flash(ch, ok);
   typed[current] += ch;
   renderWord(current);
   updateCaret();
@@ -324,6 +372,7 @@ function space() {
   const ok = isCorrect(current);
   keyTotal++; secKeys++;
   if (ok) keyCorrect++; else secErrors++;
+  if (showKeyboard()) keyboard.flash(' ', ok);
   if (current === words.length - 1) { finish(); return; }
   current++;
   if (settings.mode === 'time' && words.length - current < 40) appendWords(50);
@@ -407,7 +456,7 @@ function updateLive() {
   if (timed()) {
     liveEl.textContent = String(started ? Math.max(0, Math.round(settings.amount - elapsedSec())) : settings.amount);
   } else {
-    liveEl.textContent = `${current}/${settings.amount}`;
+    liveEl.textContent = `${current}/${words.length}`;
   }
 }
 
@@ -428,7 +477,8 @@ function finish() {
   const acc = keyTotal ? (keyCorrect / keyTotal) * 100 : 0;
   if (samples.length) samples[samples.length - 1].wpm = wpm;
   showResult({ wpm, raw, acc, sec, c });
-  showExam(raw, sec);
+  if (settings.mode === 'lesson') $('exam').innerHTML = ''; // lessons are practice, not an exam
+  else showExam(raw, sec);
 }
 
 // ---------- exam check ----------
@@ -485,7 +535,8 @@ function showResult(r: { wpm: number; raw: number; acc: number; sec: number; c: 
   $('r-chars').textContent = `${r.c.correct}/${r.c.incorrect}/${r.c.extra}/${timed() ? 0 : r.c.missed}`;
   $('r-cons').textContent = `${Math.round(consistency(samples.map(s => s.raw)))}%`;
   $('r-time').textContent = `${Math.round(r.sec)}s`;
-  const amount = settings.mode === 'passage' ? `${settings.amount / 60}m` : settings.amount;
+  const amount = settings.mode === 'passage' ? `${settings.amount / 60}m`
+    : settings.mode === 'lesson' ? lessonsFor(settings.lang)[settings.amount].name : settings.amount;
   $('r-type').innerHTML = `${settings.mode} ${amount}<br>${settings.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english'}`;
   drawChart();
   $('next').focus();

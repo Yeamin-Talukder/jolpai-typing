@@ -199,3 +199,16 @@ export function usKey(code: string, shift: boolean): string | null {
   const k = US[code];
   return k ? k[shift ? 1 : 0] : null;
 }
+
+/** The Bangla character printed on each key, for the on-screen keyboard. */
+export const KEY_LABELS: Record<string, string> = {
+  ...OTHER, ...CONS, ...POST_KAR, ...PRE_KAR,
+  x: 'ও', [LINK]: HASANTA, G: '।', [RA_PHALA]: '্র', [YA_PHALA]: '্য', [REPH]: 'র্',
+};
+
+/** Key groups used by the lessons. */
+export const BIJOY_KEYS = {
+  consonants: Object.keys(CONS).join(''),
+  preKar: Object.keys(PRE_KAR).join(''),
+  postKar: Object.keys(POST_KAR).join(''),
+};
