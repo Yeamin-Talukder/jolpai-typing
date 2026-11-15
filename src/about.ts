@@ -38,7 +38,6 @@ export function renderAbout(el: HTMLElement) {
       <section class="ab-card ab-maker">
         <h2>${icon('user', 18)}made by</h2>
         <a class="ab-person" href="${AUTHOR_URL}" target="_blank" rel="noopener">
-          <img src="${AUTHOR_URL}.png?size=120" alt="" width="56" height="56" loading="lazy" referrerpolicy="no-referrer" />
           <span><b>${AUTHOR}</b><span class="ab-handle">${GITHUB}@Yeamin-Talukder</span></span>
         </a>
         <p>Also the maker of <b>Jolpai Keyboard</b>, a typing keyboard for phones.</p>

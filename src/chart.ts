@@ -18,11 +18,16 @@ const state = new WeakMap<HTMLElement, Drawn>();
 const hidden = new WeakMap<HTMLElement, Set<Series>>();
 
 /** A tidy axis top and step: 0, 20, 40 ... or 0, 50, 100 ... */
-function niceScale(max: number, ticks = 4) {
-  const raw = Math.max(max, 1) / ticks;
-  const mag = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw)!;
-  return { top: step * ticks, step };
+export function niceScale(max: number, ticks = 4) {
+  const m = Math.max(max, 1);
+  const mag = 10 ** Math.floor(Math.log10(m / ticks));
+  // the smallest tidy step that covers the data in at most ticks + 1 steps,
+  // so the top sits just above the highest value (103 → 125, not 200)
+  for (const f of [1, 2, 2.5, 5, 10, 20, 25, 50]) {
+    const step = f * mag, k = Math.ceil(m / step);
+    if (k <= ticks + 1) return { top: k * step, step };
+  }
+  return { top: 100 * mag * ticks, step: 100 * mag };
 }
 
 /** A smooth line through the points that never overshoots them (monotone cubic). */
@@ -65,7 +70,7 @@ export function renderSpeedChart(wrap: HTMLElement, input: ChartData, id: string
     </div>
     <div class="sc-plot"><svg class="chart sc-svg" tabindex="0" role="img" aria-label="Speed during the test, ${n} seconds. Use the arrow keys to read each second."></svg>
       <div class="sc-tip" hidden></div></div>`;
-  const svg = wrap.querySelector<SVGSVGElement>('svg')!;
+  const svg = wrap.querySelector<SVGSVGElement>('.sc-svg')!;
   const W = svg.clientWidth || 800, H = svg.clientHeight || 200;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   if (n === 0) return;
@@ -126,7 +131,7 @@ function wire(wrap: HTMLElement) {
 
   const show = (i: number) => {
     const st = state.get(wrap);
-    const svg = wrap.querySelector<SVGSVGElement>('svg');
+    const svg = wrap.querySelector<SVGSVGElement>('.sc-svg');
     const tip = wrap.querySelector<HTMLElement>('.sc-tip');
     if (!st || !svg || !tip) return;
     const n = st.data.wpm.length;
@@ -163,7 +168,7 @@ function wire(wrap: HTMLElement) {
     if (tip) tip.hidden = true;
   };
   const indexAt = (clientX: number) => {
-    const st = state.get(wrap), svg = wrap.querySelector('svg');
+    const st = state.get(wrap), svg = wrap.querySelector('.sc-svg');
     if (!st || !svg) return -1;
     const box = svg.getBoundingClientRect();
     const vx = ((clientX - box.left) / box.width) * st.W;
@@ -173,12 +178,12 @@ function wire(wrap: HTMLElement) {
     return best;
   };
 
-  wrap.addEventListener('pointermove', e => { if ((e.target as Element).closest('svg')) show(indexAt(e.clientX)); });
-  wrap.addEventListener('pointerdown', e => { if ((e.target as Element).closest('svg')) show(indexAt(e.clientX)); });
+  wrap.addEventListener('pointermove', e => { if ((e.target as Element).closest('.sc-svg')) show(indexAt(e.clientX)); });
+  wrap.addEventListener('pointerdown', e => { if ((e.target as Element).closest('.sc-svg')) show(indexAt(e.clientX)); });
   wrap.addEventListener('pointerleave', hide);
   wrap.addEventListener('focusout', hide);
   wrap.addEventListener('keydown', e => {
-    if (!(e.target as Element).closest('svg')) return;
+    if (!(e.target as Element).closest('.sc-svg')) return;
     const n = state.get(wrap)?.data.wpm.length ?? 0;
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       e.preventDefault();
@@ -194,6 +199,6 @@ function wire(wrap: HTMLElement) {
     if (off.has(s)) off.delete(s); else off.add(s);
     b.classList.toggle('off', off.has(s));
     b.setAttribute('aria-pressed', String(!off.has(s)));
-    wrap.querySelector('svg')?.classList.toggle(`hide-${s}`, off.has(s));
+    wrap.querySelector('.sc-svg')?.classList.toggle(`hide-${s}`, off.has(s));
   });
 }

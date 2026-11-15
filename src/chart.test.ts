@@ -22,3 +22,13 @@ describe('smoothPath', () => {
     expect(d).toContain('C3.3,50.0 6.7,50.0 10.0,50.0');
   });
 });
+
+describe('niceScale', () => {
+  it('puts the top just above the highest value', async () => {
+    const { niceScale } = await import('./chart');
+    expect(niceScale(103)).toEqual({ top: 125, step: 25 });
+    expect(niceScale(78)).toEqual({ top: 80, step: 20 });
+    expect(niceScale(140)).toEqual({ top: 150, step: 50 });
+    expect(niceScale(0).top).toBeGreaterThan(0);
+  });
+});

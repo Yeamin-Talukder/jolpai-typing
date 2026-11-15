@@ -18,8 +18,9 @@ import { POSTS } from './exam';
 import { accountsEnabled, clearAccountHistory, currentShareId, currentUser, initAccount, loadShared, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
 import { SharePanel } from './share';
 import { renderAbout } from './about';
+import { renderProgressChart } from './progress-chart';
 import { THEMES, applyTheme, currentTheme, renderThemePicker } from './themes';
-import { countUp, drawIn, fillIcons, icon, movePills, reduceMotion } from './icons';
+import { countUp, fillIcons, icon, movePills, reduceMotion } from './icons';
 
 fillIcons();
 
@@ -795,10 +796,13 @@ function profileUser() {
   return u ? { name: u.name, email: u.email, photo: u.photo, joined: u.joined } : null;
 }
 
-function drawProfile() {
-  if (view === 'shared' && sharedData) renderProfile(profileEl, profileView, null, { shared: sharedData });
-  else renderProfile(profileEl, profileView, profileUser(), { sharing: !!currentShareId() });
+function drawProfile(animateChart = false) {
+  const list = view === 'shared' && sharedData
+    ? renderProfile(profileEl, profileView, null, { shared: sharedData })
+    : renderProfile(profileEl, profileView, profileUser(), { sharing: !!currentShareId() });
   movePills(profileEl);
+  const pg = profileEl.querySelector<HTMLElement>('.pg-wrap');
+  if (pg) renderProgressChart(pg, list, id => openResult(list, id), animateChart);
   // the activity calendar scrolls sideways on small screens: show the latest weeks
   profileEl.querySelectorAll<HTMLElement>('.p-act-scroll').forEach(el => { el.scrollLeft = el.scrollWidth; });
   const results = view === 'shared' && sharedData ? sharedData.results : loadHistory();
@@ -807,6 +811,14 @@ function drawProfile() {
     const e = results.find(x => x.id === box.dataset.id);
     if (e?.hw) renderSpeedChart(box, { wpm: e.hw, raw: e.hr ?? [], err: e.he ?? [], avg: e.wpm }, `d-${e.id.replace(/[^a-z0-9]/gi, '')}`, true);
   });
+}
+
+/** Open a result from the progress chart: show enough rows to include it, then open it. */
+function openResult(list: Entry[], id: string) {
+  const fromNewest = list.length - 1 - list.findIndex(e => e.id === id);
+  if (fromNewest >= profileView.shown) profileView.shown = Math.ceil((fromNewest + 1) / 25) * 25;
+  profileView.open = null;
+  toggleResult(id);
 }
 
 /** Open or close a result's details. */
@@ -849,9 +861,8 @@ function showView(v: View) {
     profileView.shown = 25;
     profileView.open = null;
     profileView.dev = pickDevice(loadHistory(), deviceKind());
-    drawProfile();
+    drawProfile(true);
     enter(profileEl);
-    drawIn(profileEl.querySelector<SVGPathElement>('.h-chart .wpm'), 1100);
   } else {
     refreshSettings();
     enter(settingsEl);
@@ -881,9 +892,8 @@ async function openShared(id: string) {
   profileView.open = null;
   const phone = data.results.filter(e => deviceOf(e) === 'mobile').length;
   profileView.dev = phone * 2 > data.results.length ? 'mobile' : 'desktop'; // where they type most
-  drawProfile();
+  drawProfile(true);
   enter(profileEl);
-  drawIn(profileEl.querySelector<SVGPathElement>('.h-chart .wpm'), 1100);
 }
 
 const sharePanel = new SharePanel({
@@ -913,8 +923,7 @@ profileEl.addEventListener('click', e => {
     profileView.dev = b.dataset.dev as Device;
     profileView.shown = 25;
     profileView.open = null;
-    drawProfile();
-    drawIn(profileEl.querySelector<SVGPathElement>('.h-chart .wpm'), 900);
+    drawProfile(true);
   } else if (b.dataset.hlang) {
     profileView.lang = b.dataset.hlang as Lang;
     drawProfile();

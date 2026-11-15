@@ -160,24 +160,6 @@ function activity(all: Entry[], now = new Date()) {
     </div>`;
 }
 
-function progressChart(list: Entry[]): string {
-  const pts = list.slice(-100);
-  if (pts.length < 2) return '<p class="h-empty">Take a few more tests to see your progress here.</p>';
-  const W = 800, H = 200, padL = 36, padR = 12, padT = 10, padB = 20;
-  const top = Math.max(20, Math.ceil(Math.max(...pts.map(p => p.wpm)) / 20) * 20);
-  const x = (i: number) => padL + (i / (pts.length - 1)) * (W - padL - padR);
-  const y = (v: number) => padT + (1 - v / top) * (H - padT - padB);
-  // average of the last 10 tests, to show the trend through the noise
-  const trend = pts.map((_, i) => avg(pts.slice(Math.max(0, i - 9), i + 1).map(p => p.wpm)));
-  let g = '';
-  for (let v = 0; v <= top; v += top / 4) {
-    g += `<line x1="${padL}" x2="${W - padR}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${padL - 8}" y="${y(v) + 4}" class="axis" text-anchor="end">${r0(v)}</text>`;
-  }
-  const dots = pts.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.wpm).toFixed(1)}" r="3" class="dot"><title>${esc(p.label)}: ${r0(p.wpm)} wpm, ${r0(p.acc)}%</title></circle>`).join('');
-  const line = trend.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
-  return `<svg class="chart h-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Speed over your last ${pts.length} tests">${g}${dots}<path d="${line}" class="wpm"/></svg>
-    <div class="h-legend"><span><i class="dot-key"></i>each test</span><span><i class="line-key"></i>average of last 10</span></div>`;
-}
 
 /** Everything saved about one result, shown when its row is opened. */
 function detail(e: Entry, all: Entry[], shared = false) {
@@ -217,7 +199,8 @@ function detail(e: Entry, all: Entry[], shared = false) {
 
 const FILTERS: [ResultFilter, string][] = [['all', 'all'], ['time', 'time'], ['words', 'words'], ['passage', 'passage'], ['lesson', 'lessons']];
 
-export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileUser | null, opts: ProfileOptions = {}) {
+/** Draw the profile; returns the results shown, for the progress chart. */
+export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileUser | null, opts: ProfileOptions = {}): Entry[] {
   const shared = opts.shared;
   const everything = shared ? shared.results : loadHistory();
   const perDevice = { desktop: 0, mobile: 0 };
@@ -256,7 +239,7 @@ export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileU
       ? `<div class="h-empty-box">${icon('chart', 32)}<p class="h-empty">No ${view.filter === 'all' ? '' : `${FILTERS.find(f => f[0] === view.filter)![1]} `}tests yet in this language on ${view.dev === 'mobile' ? 'a phone or tablet' : 'a computer'}.${shared ? '' : ' Finish one and it will show up here.'}</p></div>`
       : `${statsGrid(list)}
     <h2>${icon('trend', 15)}progress</h2>
-    ${progressChart(list)}
+    ${list.length < 2 ? '<p class="h-empty">Take a few more tests to see your progress here.</p>' : '<div class="pg-wrap"></div>'}
     <h2>${icon('clock', 15)}results</h2>
     <div class="h-table-wrap"><table class="h-table">
       <thead><tr><th>date</th><th>test</th><th class="num">wpm</th><th class="num opt">raw</th><th class="num opt">net</th><th class="num">acc</th><th class="num opt">time</th></tr></thead>
@@ -271,4 +254,5 @@ export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileU
       <span class="h-where">${icon(user ? 'cloud' : 'device', 14)}${user ? `Saved to your account (${esc(user.email || user.name)}), on every device you sign in on.` : 'Saved only in this browser. Sign in to keep your history on every device.'}</span>
       ${all.length ? `<button id="h-clear" class="h-clear">${icon('trash', 14)}clear all history</button>` : ''}
     </div>`}`;
+  return list;
 }
