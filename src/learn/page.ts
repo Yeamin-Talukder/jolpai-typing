@@ -47,7 +47,16 @@ function unitPanel(d: LearnData, n: number, nextId: string): string {
         <span class="ln-l-title">${esc(l.title)}</span>
         ${rec ? `<span class="ln-l-best">${Math.round(rec.wpm)} wpm · ${Math.round(rec.acc)}%</span>` : state === 'current' ? `<span class="ln-l-best go">${icon('play', 12)}start here</span>` : ''}
       </button>`;
-    }).join('')}</div>`;
+    }).join('')}</div>
+    ${unitKeys(n)}`;
+}
+
+/** The keys a unit teaches, as little keycaps with their Bangla letters. */
+function unitKeys(n: number): string {
+  const keys = [...new Set(lessonsInUnit(n).flatMap(l => [...l.newKeys]))];
+  if (!keys.length) return '';
+  return `<div class="ln-unit-keys"><span class="label">${icon('keyboard', 14)}keys in this unit</span><div class="ln-ukeys">${keys.map(k =>
+    `<span class="ln-ukey" title="${esc(physicalKey(k).toUpperCase())}${/[A-Z~!@#$%^&*()_+{}|:"<>?]/.test(k) ? ' with Shift' : ''}"><b class="bn">${esc(showChar(keyText(k)))}</b><i>${/[A-Z~!@#$%^&*()_+{}|:"<>?]/.test(k) ? '⇧' : ''}${esc(physicalKey(k).toUpperCase())}</i></span>`).join('')}</div></div>`;
 }
 
 const HOW = `

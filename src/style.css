@@ -1847,3 +1847,41 @@ body[data-view="learn"] main { padding-top: 0; }
   .ln-dash .ln-eyebrow { gap: 6px; }
   .ln-how-btn { margin-left: 0; }
 }
+
+/* ---------- course page: full width, even spacing ---------- */
+/* line up with the header: the course page uses the whole site width */
+.learn:not(.playing) { max-width: none; }
+.ln-dash { gap: clamp(12px, 2dvh, 20px); }
+.ln-dash .ln-hero { padding: clamp(16px, 2.6dvh, 28px) clamp(20px, 2.6vw, 34px); }
+.ln-map { padding: clamp(14px, 2.2dvh, 22px) clamp(14px, 1.8vw, 24px); }
+.ln-dash .ln-exam, .ln-dash .ln-mastery { padding: clamp(14px, 2.2dvh, 22px) clamp(16px, 1.8vw, 24px); }
+
+/* tall screens: no stretched, half-empty panels; the content keeps its own height and sits in the middle */
+@media (min-width: 1000px) and (min-height: 800px) {
+  body[data-view="learn"] .learn:not(.playing) { display: flex; flex-direction: column; justify-content: center; }
+  .learn:not(.playing) .ln-dash { height: auto; grid-template-rows: auto auto auto; gap: 20px; align-items: start; }
+  .ln-map, .ln-side { align-self: stretch; }
+  .ln-panel { overflow: visible; }
+  .ln-dash .ln-lessons { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .ln-dash .ln-lesson { min-height: 128px; padding: 16px 18px; gap: 6px; }
+  .ln-dash .ln-l-bn { font-size: 24px; }
+  .ln-dash .ln-l-title { font-size: 15px; }
+  .ln-side { gap: 20px; }
+  .ln-dash .ln-mastery { flex: none; container-type: inline-size; overflow: visible; gap: 12px; }
+  .ln-dash .ln-heat { --hk: min(calc(100cqw / 17.4), 36px); margin: 4px 0; }
+  .ln-dash .ln-heat .kb-key .hi, .ln-dash .ln-heat .kb-key .en { display: none; }
+  .ln-dash .ln-exam > p { display: block; }
+  .ln-dash .ln-foot { padding: 0 4px; }
+}
+.ln-unit-keys { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
+.ln-unit-keys .label { font-size: 12.5px; }
+.ln-ukeys { display: flex; flex-wrap: wrap; gap: 6px; }
+.ln-ukey {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 46px; height: 50px; padding: 0 6px;
+  border-radius: 10px; background: var(--bg); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .22);
+  transition: transform var(--med) var(--spring), background var(--fast);
+}
+.ln-ukey:hover { transform: translateY(-3px); background: var(--tint); }
+.ln-ukey b { font-size: 19px; font-weight: 500; color: var(--main); line-height: 1.2; }
+.ln-ukey i { font: normal 10.5px var(--font-mono); color: var(--sub); }
+@media (min-width: 1000px) and (max-height: 799px) { .ln-unit-keys { display: none; } }
