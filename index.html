@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jolpai Type</title>
+    <meta name="description" content="Bangla (Bijoy) and English typing practice for job typing tests." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lexend+Deca:wght@400;600&family=Noto+Sans+Bengali:wght@400;500&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="top">
+        <a class="brand" href="/" aria-label="Jolpai Type home">
+          <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="16" cy="18" rx="9" ry="11" fill="currentColor"/><path d="M16 7c2-4 6-5 9-4-1 4-5 6-9 4z" fill="var(--sub)"/></svg>
+          <span class="brand-text"><span class="brand-sub">জলপাই</span>jolpai type</span>
+        </a>
+      </header>
+
+      <main>
+        <section id="config" class="config" aria-label="Test settings">
+          <div class="group" data-group="lang">
+            <button data-lang="english" class="active">english</button>
+            <button data-lang="bangla" title="Bangla with the Bijoy 52 keyboard layout">বাংলা (বিজয়)</button>
+          </div>
+          <span class="sep"></span>
+          <div class="group" data-group="mode">
+            <button data-mode="time" class="active">time</button>
+            <button data-mode="words">words</button>
+          </div>
+          <span class="sep"></span>
+          <div class="group" data-group="amount" id="amounts"></div>
+        </section>
+
+        <section id="test" class="test">
+          <div id="live" class="live" aria-live="off"></div>
+          <div id="words-wrap" class="words-wrap">
+            <div id="words" class="words"></div>
+            <div id="caret" class="caret"></div>
+            <div id="focus-hint" class="focus-hint">click here or press any key to focus</div>
+          </div>
+          <p id="lang-hint" class="lang-hint" hidden>Bijoy layout: type with your keys as if Bijoy were on. Turn off Bijoy or Avro software first, Jolpai Type converts the keys itself.</p>
+          <input id="input" class="hidden-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Typing input" />
+          <button id="restart" class="restart" aria-label="Restart test" title="Restart (Tab + Enter)">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>
+          </button>
+        </section>
+
+        <section id="result" class="result" hidden>
+          <div class="stats-main">
+            <div><div class="label">wpm</div><div class="big" id="r-wpm">0</div></div>
+            <div><div class="label">acc</div><div class="big" id="r-acc">0%</div></div>
+          </div>
+          <div class="chart-wrap"><svg id="chart" class="chart" preserveAspectRatio="none"></svg></div>
+          <div class="stats-sub">
+            <div><div class="label">test type</div><div class="val" id="r-type"></div></div>
+            <div><div class="label">raw</div><div class="val" id="r-raw"></div></div>
+            <div><div class="label">characters</div><div class="val" id="r-chars" title="correct / incorrect / extra / missed"></div></div>
+            <div><div class="label">consistency</div><div class="val" id="r-cons"></div></div>
+            <div><div class="label">time</div><div class="val" id="r-time"></div></div>
+          </div>
+          <button id="next" class="restart" aria-label="Next test" title="Next test (Tab + Enter)">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M9 6l6 6-6 6-1.4-1.4L12.2 12 7.6 7.4z"/></svg>
+          </button>
+        </section>
+      </main>
+
+      <footer class="bottom">
+        <div class="keys"><kbd>tab</kbd> + <kbd>enter</kbd> restart <span class="dot">·</span> <kbd>esc</kbd> restart</div>
+        <div class="mobile-note">Jolpai Type works best on a computer with a keyboard. On your phone, try Jolpai Keyboard.</div>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
