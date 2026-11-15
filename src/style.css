@@ -960,3 +960,66 @@ body.replay-expanded { overflow: hidden; }
   .d-chart-wrap { height: 200px; }
   .sc-legend { justify-content: flex-start; }
 }
+
+/* ---------- content sits higher on the page, not in the middle ---------- */
+main { justify-content: flex-start; padding-top: clamp(8px, 6vh, 72px); }
+
+/* ---------- about button, bottom-left ---------- */
+.corner-left { right: auto; left: 22px; }
+.corner-left [data-tip]::after { right: auto; left: calc(100% + 10px); transform: translate(-4px, -50%); }
+.corner-left [data-tip]:hover::after, .corner-left [data-tip]:focus-visible::after { transform: translate(0, -50%); }
+.corner-left > button.active::before { display: none; }
+
+/* ---------- about page ---------- */
+.about { display: flex; flex-direction: column; gap: 18px; max-width: 980px; width: 100%; align-self: center; }
+.about.enter > * { animation: rise .45s var(--ease) both; }
+.about.enter > :nth-child(2) { animation-delay: .06s; }
+.about.enter > :nth-child(3) { animation-delay: .12s; }
+.ab-hero { display: flex; align-items: center; gap: 20px; padding: 8px 0 6px; }
+.ab-logo { width: 64px; height: 64px; flex: none; color: var(--main); animation: logo-sway 4s ease-in-out infinite; transform-origin: 50% 85%; }
+@keyframes logo-sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.ab-hero h1 { margin: 0; font-size: 34px; font-weight: 600; color: var(--text); line-height: 1.1; }
+.ab-bn { display: block; margin-top: 4px; font: 18px 'Noto Sans Bengali', var(--font-ui); color: var(--sub); }
+.ab-tag { margin: 8px 0 0; color: var(--sub); font-size: 16px; }
+.ab-card { background: var(--sub-alt); border-radius: 18px; padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+.ab-card h2 { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 600; color: var(--text); }
+.ab-card h2 .icon { color: var(--main); }
+.ab-card p { margin: 0; color: var(--sub); font-size: 15.5px; line-height: 1.65; }
+.ab-card p b { color: var(--text); font-weight: 600; }
+.ab-list { margin: 4px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.ab-list li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--bg); color: var(--text); font-size: 14.5px; }
+.ab-list .icon { color: var(--main); }
+.ab-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 18px; }
+.ab-person {
+  display: flex; align-items: center; gap: 14px; padding: 10px; margin: 0 -10px; border-radius: 14px;
+  color: inherit; text-decoration: none; transition: background var(--fast);
+}
+.ab-person:hover { background: var(--hover); }
+.ab-person img { width: 56px; height: 56px; border-radius: 50%; background: var(--bg); box-shadow: 0 0 0 2px var(--sub-alt), 0 0 0 4px var(--tint-strong); }
+.ab-person b { display: block; font-size: 18px; color: var(--text); }
+.ab-handle { display: inline-flex; align-items: center; gap: 6px; margin-top: 3px; color: var(--sub); font: 13px var(--font-mono); }
+.ab-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.ab-stat { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--bg); color: var(--sub); font-size: 14px; }
+.ab-stat .icon { color: var(--main); }
+.ab-stat b { color: var(--text); font: 600 18px var(--font-mono); }
+.ab-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.ab-actions .btn { text-decoration: none; }
+.ab-actions .btn.primary .icon { transition: transform .5s var(--spring); }
+.ab-actions .btn.primary:hover .icon { transform: rotate(72deg) scale(1.15); }
+.ab-url { color: var(--sub); font: 13px var(--font-mono); text-decoration: none; }
+.ab-url:hover { color: var(--main); text-decoration: underline; }
+
+@media (max-width: 700px) {
+  main { padding-top: 0; }
+  .corner-left { left: 12px; right: auto; }
+  .corner-left [data-tip]::after { display: none; }
+  .ab-hero { gap: 14px; }
+  .ab-logo { width: 48px; height: 48px; }
+  .ab-hero h1 { font-size: 26px; }
+  .ab-bn { font-size: 15px; }
+  .ab-tag { font-size: 14px; }
+  .ab-card { padding: 18px; border-radius: 16px; }
+  .ab-card p { font-size: 14.5px; }
+  .ab-grid { grid-template-columns: 1fr; }
+  .ab-actions .btn { flex: 1 1 auto; justify-content: center; }
+}

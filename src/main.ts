@@ -17,6 +17,7 @@ import { deviceKind, deviceOf, type Device } from './device';
 import { POSTS } from './exam';
 import { accountsEnabled, clearAccountHistory, currentShareId, currentUser, initAccount, loadShared, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
 import { SharePanel } from './share';
+import { renderAbout } from './about';
 import { THEMES, applyTheme, currentTheme, renderThemePicker } from './themes';
 import { countUp, drawIn, fillIcons, icon, movePills, reduceMotion } from './icons';
 
@@ -775,10 +776,11 @@ function drawChart(animate = false) {
 }
 
 // ---------- pages: test, profile, settings ----------
-type View = 'test' | 'profile' | 'settings' | 'shared';
+type View = 'test' | 'profile' | 'settings' | 'shared' | 'about';
 let view: View = 'test';
 const profileEl = $('history');
 const settingsEl = $('settings');
+const aboutEl = $('about');
 const profileView: ProfileView = { lang: settings.lang, filter: 'all', shown: 25, open: null, dev: deviceKind() };
 
 /** Open the profile on this device's results, or the other device's if this one has none. */
@@ -826,6 +828,8 @@ function showView(v: View) {
   view = v;
   profileEl.hidden = v !== 'profile' && v !== 'shared';
   settingsEl.hidden = v !== 'settings';
+  aboutEl.hidden = v !== 'about';
+  $('nav-about').classList.toggle('active', v === 'about');
   configEl.hidden = v !== 'test';
   cornerEl.querySelectorAll<HTMLElement>('[data-toggle]').forEach(b => { b.hidden = v !== 'test'; });
   $('nav-test').classList.toggle('active', v === 'test');
@@ -839,6 +843,7 @@ function showView(v: View) {
   document.body.classList.remove('typing');
   window.scrollTo({ top: 0 });
   if (v === 'shared') return; // openShared() draws it once loaded
+  if (v === 'about') { renderAbout(aboutEl); enter(aboutEl); return; }
   if (v === 'profile') {
     profileView.lang = settings.lang;
     profileView.shown = 25;
@@ -892,6 +897,7 @@ const sharePanel = new SharePanel({
 
 $('nav-history').addEventListener('click', () => showView(view === 'profile' ? 'test' : 'profile'));
 $('nav-settings').addEventListener('click', () => showView(view === 'settings' ? 'test' : 'settings'));
+$('nav-about').addEventListener('click', () => showView(view === 'about' ? 'test' : 'about'));
 $('nav-test').addEventListener('click', () => showView('test'));
 $('nav-test').classList.add('active');
 profileEl.addEventListener('keydown', e => {
