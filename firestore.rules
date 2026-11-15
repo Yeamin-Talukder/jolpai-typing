@@ -5,6 +5,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // A shared profile: a public copy someone chose to publish. Anyone with
+    // the link can read it; nobody can list them; only the owner can write
+    // or delete it. It never holds an email address.
+    function validShare(d) {
+      return d.keys().hasOnly(['owner', 'name', 'photo', 'joined', 'updated', 'tests', 'time', 'results'])
+        && d.keys().hasAll(['owner', 'name', 'updated', 'tests', 'time', 'results'])
+        && d.owner == request.auth.uid
+        && d.name is string && d.name.size() <= 100
+        && (!('photo' in d) || d.photo == null || (d.photo is string && d.photo.size() <= 1000))
+        && (!('joined' in d) || d.joined == null || d.joined is int)
+        && d.updated is timestamp
+        && d.tests is int && d.tests >= 0
+        && (d.time is int || d.time is float) && d.time >= 0
+        && d.results is list && d.results.size() <= 500;
+    }
+
+    match /shared/{shareId} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null && validShare(request.resource.data);
+      allow update: if request.auth != null && resource.data.owner == request.auth.uid && validShare(request.resource.data);
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+    }
+
     function isOwner(uid) {
       return request.auth != null && request.auth.uid == uid;
     }
@@ -13,8 +37,17 @@ service cloud.firestore {
       return (v is int || v is float) && v >= lo && v <= hi;
     }
 
+    // optional detail fields: absent, or the right type and size
+    function optNum(d, k, lo, hi) {
+      return !(k in d) || isNum(d[k], lo, hi);
+    }
+    function optList(d, k, max) {
+      return !(k in d) || (d[k] is list && d[k].size() <= max);
+    }
+
     function validResult(d, id) {
-      return d.keys().hasOnly(['id', 't', 'lang', 'mode', 'amount', 'label', 'wpm', 'net', 'raw', 'acc', 'sec'])
+      return d.keys().hasOnly(['id', 't', 'lang', 'mode', 'amount', 'label', 'wpm', 'net', 'raw', 'acc', 'sec',
+                               'chars', 'cons', 'words', 'wrong', 'hw', 'hr', 'he'])
         && d.keys().hasAll(['id', 't', 'lang', 'mode', 'amount', 'label', 'wpm', 'net', 'raw', 'acc', 'sec'])
         && d.id == id
         && d.t is int
@@ -24,14 +57,21 @@ service cloud.firestore {
         && d.label is string && d.label.size() <= 40
         && isNum(d.wpm, 0, 1000) && isNum(d.net, 0, 1000) && isNum(d.raw, 0, 1000)
         && isNum(d.acc, 0, 100)
-        && isNum(d.sec, 0, 3600);
+        && isNum(d.sec, 0, 3600)
+        && optList(d, 'chars', 4)
+        && optNum(d, 'cons', 0, 100)
+        && optNum(d, 'words', 0, 100000)
+        && optNum(d, 'wrong', 0, 100000)
+        && optList(d, 'hw', 700) && optList(d, 'hr', 700) && optList(d, 'he', 700);
     }
 
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow write: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['name', 'lastSeen'])
-        && request.resource.data.name is string && request.resource.data.name.size() <= 100;
+        && request.resource.data.keys().hasOnly(['name', 'lastSeen', 'shareId'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 100
+        && (!('shareId' in request.resource.data) || request.resource.data.shareId == null
+            || (request.resource.data.shareId is string && request.resource.data.shareId.size() <= 40));
       allow delete: if isOwner(uid);
 
       match /results/{resultId} {

@@ -16,7 +16,17 @@ export interface Entry {
   raw: number;
   acc: number;
   sec: number;
+  // details, saved for tests taken since they were added
+  chars?: number[];   // correct, incorrect, extra, missed keystrokes
+  cons?: number;      // consistency, %
+  words?: number;     // words typed
+  wrong?: number;     // wrong words
+  hw?: number[];      // speed each second
+  hr?: number[];      // raw speed each second
+  he?: number[];      // mistakes each second
 }
+
+const KEEP_GRAPHS = 200; // per-second graphs kept in the browser for the newest results only
 
 const KEY = 'jolpai-type:history';
 const MAX = 1000;
@@ -43,7 +53,14 @@ export function replaceHistory(list: Entry[]) {
 }
 
 function save(list: Entry[]) {
-  try { localStorage.setItem(KEY, JSON.stringify(list.slice(-MAX))); } catch { /* storage full or blocked */ }
+  // per-second graphs take the most room, so the browser keeps them only
+  // for recent results (the account keeps them all)
+  const kept = list.slice(-MAX).map((e, i, all) => {
+    if (i >= all.length - KEEP_GRAPHS || !e.hw) return e;
+    const { hw: _w, hr: _r, he: _e, ...rest } = e;
+    return rest;
+  });
+  try { localStorage.setItem(KEY, JSON.stringify(kept)); } catch { /* storage full or blocked */ }
 }
 
 const sameTest = (a: Entry, b: Pick<Entry, 'lang' | 'mode' | 'amount'>) =>

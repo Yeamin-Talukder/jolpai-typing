@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { doc, getDoc, serverTimestamp, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 let env: RulesTestEnvironment;
 
@@ -46,6 +46,16 @@ describe('results', () => {
     await assertFails(setDoc(doc(db, 'users/alice/results/r1'), result('r1', { acc: 120 })));
   });
 
+  it('accepts the optional detail fields, within limits', async () => {
+    const db = env.authenticatedContext('alice').firestore();
+    const detail = { chars: [120, 3, 1, 0], cons: 88.5, words: 25, wrong: 1, hw: [60, 70, 72], hr: [62, 75, 74], he: [0, 1, 0] };
+    await assertSucceeds(setDoc(doc(db, 'users/alice/results/r1'), result('r1', detail)));
+    await assertFails(setDoc(doc(db, 'users/alice/results/r2'), result('r2', { cons: 150 })));
+    await assertFails(setDoc(doc(db, 'users/alice/results/r3'), result('r3', { chars: [1, 2, 3, 4, 5] })));
+    await assertFails(setDoc(doc(db, 'users/alice/results/r4'), result('r4', { hw: 'fast' })));
+    await assertFails(setDoc(doc(db, 'users/alice/results/r5'), result('r5', { hw: Array(701).fill(1) })));
+  });
+
   it('results cannot be edited, only deleted', async () => {
     const db = env.authenticatedContext('alice').firestore();
     await setDoc(doc(db, 'users/alice/results/r1'), result('r1'));
@@ -61,5 +71,44 @@ describe('profile', () => {
     await assertFails(setDoc(doc(db, 'users/alice'), { name: 'Alice', role: 'admin' }));
     const bob = env.authenticatedContext('bob').firestore();
     await assertFails(getDoc(doc(bob, 'users/alice')));
+  });
+});
+
+describe('shared profiles', () => {
+  const share = (owner: string, over: Record<string, unknown> = {}) => ({
+    owner, name: 'Alice', photo: null, joined: 1763200000000, updated: serverTimestamp(), tests: 3, time: 90.5,
+    results: [result('r1')], ...over,
+  });
+
+  it('the owner can publish, update and delete it', async () => {
+    const db = env.authenticatedContext('alice').firestore();
+    await assertSucceeds(setDoc(doc(db, 'shared/abc'), share('alice')));
+    await assertSucceeds(setDoc(doc(db, 'shared/abc'), share('alice', { tests: 4 })));
+    await assertSucceeds(deleteDoc(doc(db, 'shared/abc')));
+  });
+
+  it('anyone with the link can read it, but nobody can list them', async () => {
+    await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'shared/abc'), share('alice', { updated: new Date() })));
+    const guest = env.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(guest, 'shared/abc')));
+    await assertFails(getDocs(collection(guest, 'shared')));
+  });
+
+  it('nobody else can write it, and bad data is refused', async () => {
+    await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'shared/abc'), share('alice', { updated: new Date() })));
+    const bob = env.authenticatedContext('bob').firestore();
+    await assertFails(setDoc(doc(bob, 'shared/abc'), share('bob')));
+    await assertFails(deleteDoc(doc(bob, 'shared/abc')));
+    await assertFails(setDoc(doc(bob, 'shared/xyz'), share('alice')));        // pretending to be alice
+    await assertFails(setDoc(doc(bob, 'shared/xyz'), share('bob', { email: 'b@x.com' })));
+    await assertFails(setDoc(doc(bob, 'shared/xyz'), share('bob', { results: Array(501).fill(result('r')) })));
+    const guest = env.unauthenticatedContext().firestore();
+    await assertFails(setDoc(doc(guest, 'shared/new'), share('alice')));
+  });
+
+  it('the owner can keep the share id in their profile', async () => {
+    const db = env.authenticatedContext('alice').firestore();
+    await assertSucceeds(setDoc(doc(db, 'users/alice'), { name: 'Alice', lastSeen: serverTimestamp(), shareId: 'abc' }));
+    await assertSucceeds(setDoc(doc(db, 'users/alice'), { name: 'Alice', shareId: null }));
   });
 });

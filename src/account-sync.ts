@@ -4,11 +4,22 @@ import type { Entry } from './history';
 
 /** The fields stored in the account; anything else is dropped. */
 export function cleanEntry(e: Entry): Entry {
-  return {
+  const out: Entry = {
     id: String(e.id), t: Number(e.t), lang: e.lang, mode: String(e.mode), amount: Number(e.amount),
     label: String(e.label), wpm: Number(e.wpm), net: Number(e.net), raw: Number(e.raw),
     acc: Number(e.acc), sec: Number(e.sec),
   };
+  // optional details, only when present and well formed
+  const nums = (v: unknown, max: number) => Array.isArray(v) && v.length <= max ? v.map(Number) : undefined;
+  const chars = nums(e.chars, 4), hw = nums(e.hw, 700), hr = nums(e.hr, 700), he = nums(e.he, 700);
+  if (chars) out.chars = chars;
+  if (typeof e.cons === 'number') out.cons = e.cons;
+  if (typeof e.words === 'number') out.words = e.words;
+  if (typeof e.wrong === 'number') out.wrong = e.wrong;
+  if (hw) out.hw = hw;
+  if (hr) out.hr = hr;
+  if (he) out.he = he;
+  return out;
 }
 
 /**

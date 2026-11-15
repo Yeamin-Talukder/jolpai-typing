@@ -1,10 +1,18 @@
 // The profile page: who you are, personal bests, averages, activity and every result.
 import { loadHistory, type Entry, type Lang } from './history';
 import { icon, type IconName } from './icons';
+import { POSTS } from './exam';
 
 export interface ProfileUser { name: string; email: string; photo: string | null; joined: number | null }
 export type ResultFilter = 'all' | 'time' | 'words' | 'passage' | 'lesson';
-export interface ProfileView { lang: Lang; filter: ResultFilter; shown: number }
+export interface ProfileView { lang: Lang; filter: ResultFilter; shown: number; open: string | null }
+
+/** Someone's shared profile, shown read-only. */
+export interface SharedData {
+  name: string; photo: string | null; joined: number | null; updated: number | null;
+  tests: number; time: number; results: Entry[];
+}
+export interface ProfileOptions { shared?: SharedData; sharing?: boolean }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const r0 = (n: number) => String(Math.round(n));
@@ -33,9 +41,21 @@ export function streak(list: Entry[], now = new Date()): number {
   return n;
 }
 
-function profileCard(all: Entry[], user: ProfileUser | null) {
+function profileCard(all: Entry[], user: ProfileUser | null, opts: ProfileOptions) {
+  const shared = opts.shared;
+  if (shared) user = { name: shared.name, email: '', photo: shared.photo, joined: shared.joined };
   const first = all.length ? Math.min(...all.map(e => e.t)) : null;
   const since = user?.joined ? `joined ${fmtDay(user.joined)}` : first ? `typing since ${fmtDay(first)}` : 'no tests yet';
+  const tests = shared ? shared.tests : all.length;
+  const time = shared ? shared.time : all.reduce((a, e) => a + e.sec, 0);
+  const sync = shared
+    ? `${icon('globe', 13)}shared profile${shared.updated ? ` · updated ${fmtDate(shared.updated)}` : ''}`
+    : user ? `${icon('cloud', 13)}saved to your account${opts.sharing ? ` · ${icon('share', 13)}shared` : ''}`
+      : `${icon('device', 13)}saved only in this browser · <button id="p-sign-in" class="link">sign in</button> to keep it everywhere`;
+  const actions = shared ? '' : `<div class="p-actions">
+        <button id="p-share" class="btn primary p-share-btn" title="Share your profile with a link or QR code">${icon('share', 15)}share profile</button>
+        ${user ? `<button id="p-sign-out" class="btn p-out" title="Sign out of ${esc(user.email || user.name)}">${icon('logout', 15)}sign out</button>` : ''}
+      </div>`;
   const initial = esc((user?.name || '?').trim().charAt(0).toUpperCase());
   const avatar = user
     ? user.photo ? `<img src="${esc(user.photo)}" alt="" referrerpolicy="no-referrer" />` : `<span>${initial}</span>`
@@ -49,13 +69,16 @@ function profileCard(all: Entry[], user: ProfileUser | null) {
         <div>
           <div class="p-name">${user ? esc(user.name) : 'guest'}</div>
           <div class="p-since">${since}</div>
-          <div class="p-sync">${user ? `${icon('cloud', 13)}saved to your account` : `${icon('device', 13)}saved only in this browser · <button id="p-sign-in" class="link">sign in</button> to keep it everywhere`}</div>
+          <div class="p-sync">${sync}</div>
         </div>
       </div>
+      <div class="p-side">
+      ${actions}
       <div class="p-stats">
-        ${stat('hash', 'tests completed', String(all.length))}
-        ${stat('clock', 'time typing', fmtDuration(all.reduce((a, e) => a + e.sec, 0)))}
+        ${stat('hash', 'tests completed', String(tests))}
+        ${stat('clock', 'time typing', fmtDuration(time))}
         ${stat('flame', 'day streak', String(streak(all)))}
+      </div>
       </div>
     </div>`;
 }
@@ -153,17 +176,59 @@ function progressChart(list: Entry[]): string {
     <div class="h-legend"><span><i class="dot-key"></i>each test</span><span><i class="line-key"></i>average of last 10</span></div>`;
 }
 
+/** Everything saved about one result, shown when its row is opened. */
+function detail(e: Entry, all: Entry[], shared = false) {
+  const same = all.filter(x => x.lang === e.lang && x.mode === e.mode && x.amount === e.amount);
+  const isPb = same.length > 1 && same.every(x => x.wpm <= e.wpm);
+  const when = new Date(e.t).toLocaleString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const cell = (label: string, value: string, sub = '') =>
+    `<div class="d-cell"><div class="label">${label}</div><div class="val">${value}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`;
+  const cells = [
+    cell('wpm', r0(e.wpm)),
+    cell('raw', r0(e.raw)),
+    e.mode === 'lesson' ? '' : cell('net', r0(e.net)),
+    cell('accuracy', `${r0(e.acc)}%`),
+    e.cons !== undefined ? cell('consistency', `${r0(e.cons)}%`) : '',
+    e.chars ? cell('characters', e.chars.join('/'), 'correct / wrong / extra / missed') : '',
+    e.words !== undefined ? cell('words typed', String(e.words)) : '',
+    e.wrong !== undefined ? cell('wrong words', String(e.wrong)) : '',
+    cell('time', fmtDuration(e.sec)),
+  ].join('');
+  const exam = e.mode === 'lesson' ? '' : `<ul class="posts d-posts">${POSTS.map(p => {
+    const need = p[e.lang], ok = e.net >= need;
+    return `<li class="${ok ? 'pass' : 'fail'}"><span class="mark">${icon(ok ? 'check' : 'x', 14)}</span>${p.name}<span class="need">needs ${need} net wpm</span></li>`;
+  }).join('')}</ul>`;
+  const graph = e.hw && e.hw.length
+    ? `<div class="d-chart-wrap"><svg class="chart d-chart" data-id="${esc(e.id)}" preserveAspectRatio="none" role="img" aria-label="Speed during this test"></svg></div>
+       <div class="h-legend"><span><i class="line-key"></i>wpm</span><span><i class="line-key raw-key"></i>raw</span><span><i class="err-key">×</i>mistakes</span></div>`
+    : shared ? '' : `<p class="d-note">${icon('info', 14)}The speed graph and character counts are saved for tests taken from now on.</p>`;
+  return `<div class="d-box">
+      <div class="d-head">
+        <div><div class="d-title">${esc(e.label)} · ${e.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english'}</div><div class="d-when">${esc(when)}</div></div>
+        ${isPb ? `<span class="pb">${icon('trophy', 14)}personal best</span>` : ''}
+      </div>
+      <div class="d-stats">${cells}</div>
+      ${graph}
+      ${exam}
+    </div>`;
+}
+
 const FILTERS: [ResultFilter, string][] = [['all', 'all'], ['time', 'time'], ['words', 'words'], ['passage', 'passage'], ['lesson', 'lessons']];
 
-export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileUser | null) {
-  const all = loadHistory();
+export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileUser | null, opts: ProfileOptions = {}) {
+  const shared = opts.shared;
+  const all = shared ? shared.results : loadHistory();
   const inLang = all.filter(e => e.lang === view.lang);
   const list = view.filter === 'all' ? inLang : inLang.filter(e => e.mode === view.filter);
-  const rows = list.slice(-view.shown).reverse().map(e =>
-    `<tr><td>${fmtDate(e.t)}</td><td>${esc(e.label)}</td><td class="num">${r0(e.wpm)}</td><td class="num">${r0(e.raw)}</td><td class="num">${e.mode === 'lesson' ? '–' : r0(e.net)}</td><td class="num">${r0(e.acc)}%</td><td class="num">${fmtDuration(e.sec)}</td></tr>`).join('');
+  const rows = list.slice(-view.shown).reverse().map(e => {
+    const open = view.open === e.id;
+    return `<tr class="h-row ${open ? 'open' : ''}" data-id="${esc(e.id)}" tabindex="0" aria-expanded="${open}" title="Show the details of this test">`
+      + `<td>${icon('next', 13, 'h-chev')}${fmtDate(e.t)}</td><td>${esc(e.label)}</td><td class="num">${r0(e.wpm)}</td><td class="num">${r0(e.raw)}</td><td class="num">${e.mode === 'lesson' ? '–' : r0(e.net)}</td><td class="num">${r0(e.acc)}%</td><td class="num">${fmtDuration(e.sec)}</td></tr>`
+      + (open ? `<tr class="h-detail"><td colspan="7">${detail(e, all, !!shared)}</td></tr>` : '');
+  }).join('');
 
   el.innerHTML = `
-    ${profileCard(all, user)}
+    ${profileCard(all, user, opts)}
     <div class="h-head">
       <h2>${icon('trophy', 15)}personal bests</h2>
       <div class="group seg h-lang">
@@ -179,7 +244,7 @@ export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileU
       <div class="group seg h-filter">${FILTERS.map(([f, label]) => `<button data-filter="${f}" class="${view.filter === f ? 'active' : ''}">${label}</button>`).join('')}</div>
     </div>
     ${list.length === 0
-      ? `<div class="h-empty-box">${icon('chart', 32)}<p class="h-empty">No ${view.filter === 'all' ? '' : `${FILTERS.find(f => f[0] === view.filter)![1]} `}tests yet in this language. Finish one and it will show up here.</p></div>`
+      ? `<div class="h-empty-box">${icon('chart', 32)}<p class="h-empty">No ${view.filter === 'all' ? '' : `${FILTERS.find(f => f[0] === view.filter)![1]} `}tests yet in this language.${shared ? '' : ' Finish one and it will show up here.'}</p></div>`
       : `${statsGrid(list)}
     <h2>${icon('trend', 15)}progress</h2>
     ${progressChart(list)}
@@ -189,8 +254,12 @@ export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileU
       <tbody>${rows}</tbody>
     </table></div>
     ${list.length > view.shown ? `<button id="h-more" class="btn more">show ${Math.min(25, list.length - view.shown)} more · ${list.length - view.shown} left</button>` : ''}`}
-    <div class="h-foot">
+    ${shared ? `<div class="p-invite">
+      <div><div class="p-invite-title">Practise typing like ${esc(shared.name.split(' ')[0])}</div>
+      <p>Jolpai Type is free typing practice for Bangla (Bijoy) and English, made for job typing tests.</p></div>
+      <button id="p-start" class="btn primary">${icon('keyboard', 15)}start typing</button>
+    </div>` : `<div class="h-foot">
       <span class="h-where">${icon(user ? 'cloud' : 'device', 14)}${user ? `Saved to your account (${esc(user.email || user.name)}), on every device you sign in on.` : 'Saved only in this browser. Sign in to keep your history on every device.'}</span>
       ${all.length ? `<button id="h-clear" class="h-clear">${icon('trash', 14)}clear all history</button>` : ''}
-    </div>`;
+    </div>`}`;
 }

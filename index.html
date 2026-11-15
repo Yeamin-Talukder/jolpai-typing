@@ -33,28 +33,21 @@
 
       <main>
         <section id="config" class="config" aria-label="Test settings">
-          <div class="group seg" data-group="lang">
-            <button data-lang="english" class="active">english</button>
-            <button data-lang="bangla" title="Bangla with the Bijoy 52 keyboard layout">বাংলা (বিজয়)</button>
+          <div class="group toggles" id="extras">
+            <button data-extra="punctuation" title="Add punctuation to the words" aria-pressed="false"><i data-icon="at"></i>punctuation</button>
+            <button data-extra="numbers" title="Mix numbers in with the words" aria-pressed="false"><i data-icon="hash"></i>numbers</button>
           </div>
-          <span class="sep"></span>
           <div class="group seg" data-group="mode">
             <button data-mode="time" class="active"><i data-icon="clock"></i>time</button>
             <button data-mode="words"><i data-icon="words"></i>words</button>
             <button data-mode="passage" title="Exam-style paragraph against the clock"><i data-icon="passage"></i>passage</button>
             <button data-mode="lesson" title="Learn the keyboard row by row"><i data-icon="lessons"></i>lessons</button>
           </div>
-          <span class="sep"></span>
           <div class="group seg" data-group="amount" id="amounts"></div>
-          <span class="sep"></span>
-          <div class="group toggles">
-            <button data-toggle="keyboard" title="Show or hide the on-screen keyboard"><i data-icon="keyboard"></i>keyboard</button>
-            <button data-toggle="exam" title="Show or hide the government job exam check on the result"><i data-icon="exam"></i>exam check</button>
-          </div>
         </section>
 
         <section id="test" class="test">
-          <div class="test-top"><div id="live" class="live" aria-live="off"></div><div class="live-stats" aria-hidden="true"><span id="ls-wpm" title="live speed"><b>0</b> wpm</span><span id="ls-acc" title="live accuracy"><b>100%</b> acc</span><span id="ls-burst" title="speed of the last word"><b>0</b> burst</span></div><div class="progress" aria-hidden="true"><div id="progress-bar" class="progress-bar"></div></div></div>
+          <div class="test-top"><button id="lang-pick" class="lang-pick" title="Switch language"><i data-icon="globe" data-size="17"></i><span id="lang-name">english</span></button><div id="live" class="live" aria-live="off"></div><div class="live-stats" aria-hidden="true"><span id="ls-wpm" title="live speed"><b>0</b> wpm</span><span id="ls-acc" title="live accuracy"><b>100%</b> acc</span><span id="ls-burst" title="speed of the last word"><b>0</b> burst</span></div><div class="progress" aria-hidden="true"><div id="progress-bar" class="progress-bar"></div></div></div>
           <div id="words-wrap" class="words-wrap">
             <div id="words" class="words"></div>
             <div id="caret" class="caret"></div>
@@ -63,7 +56,7 @@
           <p id="lang-hint" class="lang-hint" hidden><i data-icon="info" data-size="14"></i>Bijoy layout: type with your keys as if Bijoy were on. Turn off Bijoy or Avro software first, Jolpai Type converts the keys itself.</p>
           <div id="keyboard" class="keyboard" aria-hidden="true"></div>
           <input id="input" class="hidden-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Typing input" />
-          <button id="restart" class="restart" aria-label="Restart test" title="Restart (Tab + Enter)"><i data-icon="restart" data-size="20"></i>
+          <button id="restart" class="restart" aria-label="Restart test" data-tip="restart test · tab + enter"><i data-icon="restart" data-size="20"></i>
           </button>
         </section>
 
@@ -94,9 +87,18 @@
         <section id="settings" class="settings" hidden aria-label="Settings"></section>
       </main>
 
+      <div id="corner" class="corner" role="group" aria-label="Quick settings">
+        <div id="theme-menu" class="theme-menu" hidden>
+          <div class="tm-title">theme</div>
+          <div id="themes" class="themes" role="group" aria-label="Colour theme"></div>
+        </div>
+        <button id="theme-btn" data-tip="theme" aria-label="Colour theme" aria-haspopup="true" aria-expanded="false"><span class="sw-dot"></span></button>
+        <button data-toggle="keyboard" data-tip="on-screen keyboard" aria-label="On-screen keyboard" aria-pressed="false"><i data-icon="keyboard" data-size="18"></i></button>
+        <button data-toggle="exam" data-tip="exam check on the result" aria-label="Exam check on the result" aria-pressed="false"><i data-icon="exam" data-size="18"></i></button>
+      </div>
+
       <footer class="bottom">
         <div class="keys"><kbd>tab</kbd> + <kbd>enter</kbd> restart <span class="dot">·</span> <kbd>esc</kbd> restart</div>
-        <div id="themes" class="themes" role="group" aria-label="Colour theme"></div>
         <div class="mobile-note">Jolpai Type works best on a computer with a keyboard. On your phone, try Jolpai Keyboard.</div>
       </footer>
     </div>

@@ -44,6 +44,7 @@ export class Replay {
             <button data-speed="0.5">0.5×</button><button data-speed="1" class="active">1×</button><button data-speed="2">2×</button><button data-speed="4">4×</button>
           </div>
           <span class="rp-time">0.0s</span>
+          <button class="rp-full" aria-label="Full screen" title="Full screen (Esc to leave)">${icon('maximize', 15)}</button>
         </div>
       </div>
       <div class="rp-bar"><div></div></div>
@@ -54,16 +55,59 @@ export class Replay {
     this.timeEl = root.querySelector('.rp-time')!;
     this.barEl = root.querySelector('.rp-bar div')!;
     this.kb = new Keyboard(root.querySelector('.rp-kb')!);
+    document.addEventListener('fullscreenchange', () => {
+      this.setFullIcon(root, document.fullscreenElement === root);
+      requestAnimationFrame(() => this.mark()); // line height changed
+    });
     root.addEventListener('click', e => {
       const b = (e.target as HTMLElement).closest('button');
       if (!b) return;
       if (b.classList.contains('rp-play')) this.toggle();
+      else if (b.classList.contains('rp-full')) this.fullscreen(root);
       else if (b.classList.contains('rp-restart')) { this.rewind(); this.play(); }
       else if (b.dataset.speed) {
         this.speed = Number(b.dataset.speed);
         root.querySelectorAll('.rp-speed button').forEach(x => x.classList.toggle('active', x === b));
       }
     });
+  }
+
+  /** Show the replay on the whole screen, or leave full screen. Where the
+   *  browser does not allow full screen, it fills the window instead. */
+  private fullscreen(root: HTMLElement) {
+    if (document.fullscreenElement) { document.exitFullscreen(); return; }
+    if (root.classList.contains('expanded')) { this.expand(root, false); return; }
+    let settled = false;
+    const fallback = () => { if (!settled) { settled = true; this.expand(root, true); } };
+    if (!root.requestFullscreen) { fallback(); return; }
+    root.requestFullscreen().then(() => {
+      if (settled) { root.classList.remove('expanded'); document.body.classList.remove('replay-expanded'); }
+      settled = true;
+      if (!this.playing) this.play();
+    }).catch(fallback);
+    // some embedded browsers never answer the request
+    setTimeout(() => { if (document.fullscreenElement !== root) fallback(); }, 700);
+  }
+
+  private expand(root: HTMLElement, on: boolean) {
+    root.classList.toggle('expanded', on);
+    document.body.classList.toggle('replay-expanded', on);
+    this.setFullIcon(root, on);
+    if (on && !this.playing) this.play();
+    requestAnimationFrame(() => this.mark());
+  }
+
+  private setFullIcon(root: HTMLElement, on: boolean) {
+    const b = root.querySelector<HTMLElement>('.rp-full')!;
+    b.innerHTML = icon(on ? 'minimize' : 'maximize', 15);
+    b.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
+  }
+
+  /** Leave full screen or the expanded view, if either is on. Returns whether it did. */
+  closeFull(): boolean {
+    const root = this.wordsEl.parentElement!;
+    if (root.classList.contains('expanded')) { this.expand(root, false); return true; }
+    return false;
   }
 
   /** Load a finished test; nothing plays until play() is called. */

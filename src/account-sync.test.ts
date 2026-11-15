@@ -28,4 +28,13 @@ describe('mergeHistories', () => {
     const { upload } = mergeHistories([{ ...e('a', 1), extra: 'x' } as Entry], [], '', 'u1');
     expect(Object.keys(upload[0])).not.toContain('extra');
   });
+
+  it('keeps well-formed details and drops malformed ones', () => {
+    const withDetail = { ...e('a', 1), chars: [10, 1, 0, 0], cons: 90, hw: [50, 60] } as Entry;
+    const bad = { ...e('b', 2), chars: [1, 2, 3, 4, 5], hw: 'fast' } as unknown as Entry;
+    const { upload } = mergeHistories([withDetail, bad], [], '', 'u1');
+    expect(upload[0]).toMatchObject({ chars: [10, 1, 0, 0], cons: 90, hw: [50, 60] });
+    expect(Object.keys(upload[1])).not.toContain('chars');
+    expect(Object.keys(upload[1])).not.toContain('hw');
+  });
 });

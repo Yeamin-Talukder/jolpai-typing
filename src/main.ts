@@ -5,13 +5,17 @@ import { BANGLA_WORDS } from './words-bn';
 import { bijoyToUnicode, unicodeToSegments, usKey } from './bijoy';
 import { Keyboard } from './keyboard';
 import { lessonItems, lessonsFor } from './lessons';
-import { addEntry, clearHistory, newId, type Entry } from './history';
-import { renderProfile, type ProfileView, type ResultFilter } from './profile';
+import { addEntry, clearHistory, loadHistory, newId, type Entry } from './history';
+import { renderProfile, type ProfileView, type ResultFilter, type SharedData } from './profile';
 import { FONT_PX, DEFAULT_PREFS, loadPrefs, savePrefs } from './prefs';
 import { keySound, previewSound } from './sound';
 import { ON_OFF, onOff, renderSettings, type Section } from './settings-page';
 import { Replay, type KeyEvent } from './replay';
-import { accountsEnabled, clearAccountHistory, currentUser, initAccount, saveToAccount, signIn, signOut, type AccountUser } from './account';
+import { speedChart } from './chart';
+import { addExtras } from './extras';
+import { POSTS } from './exam';
+import { accountsEnabled, clearAccountHistory, currentShareId, currentUser, initAccount, loadShared, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
+import { SharePanel } from './share';
 import { THEMES, applyTheme, currentTheme, renderThemePicker } from './themes';
 import { countUp, drawIn, fillIcons, icon, movePills, reduceMotion } from './icons';
 
@@ -37,17 +41,17 @@ const SETTINGS_KEY = 'jolpai-type:settings';
 
 // showKeyboard replaced an older `keyboard` setting that was saved as on for
 // everyone; the on-screen keyboard is now off until the typist turns it on.
-interface Settings { lang: Lang; mode: Mode; amount: number; showKeyboard: boolean; showExam: boolean }
+interface Settings { lang: Lang; mode: Mode; amount: number; showKeyboard: boolean; showExam: boolean; punctuation: boolean; numbers: boolean }
 
 function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '');
     const lang: Lang = s.lang === 'bangla' ? 'bangla' : 'english';
     if (['time', 'words', 'passage', 'lesson'].includes(s.mode) && amountsFor(s.mode, lang).includes(s.amount)) {
-      return { lang, mode: s.mode, amount: s.amount, showKeyboard: s.showKeyboard === true, showExam: s.showExam === true };
+      return { lang, mode: s.mode, amount: s.amount, showKeyboard: s.showKeyboard === true, showExam: s.showExam === true, punctuation: s.punctuation === true, numbers: s.numbers === true };
     }
   } catch { /* first visit or storage blocked */ }
-  return { lang: 'english', mode: 'time', amount: 30, showKeyboard: false, showExam: false };
+  return { lang: 'english', mode: 'time', amount: 30, showKeyboard: false, showExam: false, punctuation: false, numbers: false };
 }
 function saveSettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* ignore */ }
@@ -66,6 +70,7 @@ const liveEl = $('live');
 const testEl = $('test');
 const resultEl = $('result');
 const configEl = $('config');
+const cornerEl = $('corner');
 const amountsEl = $('amounts');
 const hintEl = $('lang-hint');
 const progressEl = $('progress-bar');
@@ -117,8 +122,12 @@ function pickPassage(): Word[] {
 /** Time and passage tests run against the clock. */
 const timed = () => settings.mode === 'time' || settings.mode === 'passage';
 
+/** Time and words tests use random words (where punctuation and numbers apply). */
+const randomWordsMode = () => settings.mode === 'time' || settings.mode === 'words';
+
 function pickWords(n: number): Word[] {
-  return randomWords(n, settings.lang === 'bangla' ? BANGLA_WORDS : undefined).map(makeWord);
+  const plain = randomWords(n, settings.lang === 'bangla' ? BANGLA_WORDS : undefined);
+  return addExtras(plain, settings.lang, settings).map(makeWord);
 }
 
 // ---------- state ----------
@@ -158,8 +167,16 @@ function isCorrect(i: number) {
 
 // ---------- setup ----------
 function renderConfig() {
-  configEl.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach(b =>
-    b.classList.toggle('active', b.dataset.lang === settings.lang));
+  $('lang-name').textContent = settings.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english';
+  $('lang-pick').title = settings.lang === 'bangla' ? 'Switch to English' : 'Switch to Bangla (Bijoy)';
+  // punctuation and numbers apply to random words (time and words tests)
+  const extrasEl = $('extras');
+  extrasEl.hidden = !randomWordsMode();
+  for (const k of ['punctuation', 'numbers'] as const) {
+    const b = extrasEl.querySelector<HTMLButtonElement>(`[data-extra="${k}"]`)!;
+    b.classList.toggle('active', settings[k]);
+    b.setAttribute('aria-pressed', String(settings[k]));
+  }
   configEl.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach(b =>
     b.classList.toggle('active', b.dataset.mode === settings.mode));
   amountsEl.innerHTML = '';
@@ -179,27 +196,33 @@ function renderConfig() {
   const bn = settings.lang === 'bangla';
   wrapEl.classList.toggle('bn', bn);
   hintEl.hidden = !bn;
-  const kbBtn = configEl.querySelector<HTMLButtonElement>('[data-toggle="keyboard"]')!;
-  kbBtn.classList.toggle('active', showKeyboard());
-  configEl.querySelector('[data-toggle="exam"]')!.classList.toggle('active', settings.showExam);
+  for (const [name, on] of [['keyboard', showKeyboard()], ['exam', settings.showExam]] as const) {
+    const b = cornerEl.querySelector<HTMLButtonElement>(`[data-toggle="${name}"]`)!;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', String(on));
+  }
   keyboard.render(settings.lang);
   $('keyboard').hidden = !showKeyboard();
   movePills(configEl);
 }
 
+// quick on/off buttons in the corner
+cornerEl.addEventListener('click', e => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-toggle]');
+  if (!b) return;
+  if (b.dataset.toggle === 'keyboard') settings.showKeyboard = !settings.showKeyboard;
+  else settings.showExam = !settings.showExam;
+  saveSettings();
+  renderConfig();
+  if (!finished) { updateCaret(); focusInput(); } else drawExam();
+});
+
 configEl.addEventListener('click', e => {
   const b = (e.target as HTMLElement).closest('button');
   if (!b || b.disabled) return;
-  if (b.dataset.toggle) {
-    if (b.dataset.toggle === 'keyboard') settings.showKeyboard = !settings.showKeyboard;
-    else settings.showExam = !settings.showExam;
-    saveSettings();
-    renderConfig();
-    if (!finished) { updateCaret(); focusInput(); }
-    return;
-  } else if (b.dataset.lang) {
-    settings.lang = b.dataset.lang as Lang;
-    if (settings.mode === 'lesson') settings.amount = Math.min(settings.amount, lessonsFor(settings.lang).length - 1);
+  if (b.dataset.extra) {
+    const k = b.dataset.extra as 'punctuation' | 'numbers';
+    settings[k] = !settings[k];
   } else if (b.dataset.mode) {
     const mode = b.dataset.mode as Mode;
     if (mode !== settings.mode) {
@@ -214,6 +237,15 @@ configEl.addEventListener('click', e => {
   // on the result screen a new choice waits for "next test", so a stray
   // click never throws the result away
   if (finished && !resultEl.hidden) { noteNext(); return; }
+  reset();
+});
+
+// the language switch above the words
+$('lang-pick').addEventListener('click', () => {
+  settings.lang = settings.lang === 'bangla' ? 'english' : 'bangla';
+  if (settings.mode === 'lesson') settings.amount = Math.min(settings.amount, lessonsFor(settings.lang).length - 1);
+  saveSettings();
+  renderConfig();
   reset();
 });
 
@@ -246,6 +278,7 @@ function reset(repeat = false) {
   wordStart = 0;
   lastBurst = 0;
   keyLog = [];
+  replay.closeFull();
   replayEl.hidden = true;
   $('replay-btn').classList.remove('active');
   replay.stop();
@@ -392,6 +425,9 @@ inputEl.addEventListener('blur', () => wrapEl.classList.add('blurred'));
 let tabArmed = false;
 
 document.addEventListener('keydown', e => {
+  if (document.querySelector('dialog[open]')) return; // the share panel handles its own keys
+  if (e.key === 'Escape' && !themeMenu.hidden) { e.preventDefault(); openThemeMenu(false); if (view === 'test' && !finished) focusInput(); return; }
+  if (e.key === 'Escape' && replay.closeFull()) { e.preventDefault(); return; } // leave the expanded replay first
   if (view !== 'test') { if (e.key === 'Escape') showView('test'); return; }
   // keys still flying when the test ends must not start a new one
   if (finished && performance.now() - finishedAt < 700) { if (e.key !== 'Escape') e.preventDefault(); return; }
@@ -436,6 +472,7 @@ function startIfNeeded() {
   startTime = performance.now();
   document.body.classList.add('typing');
   configEl.classList.add('faded');
+  if (!themeMenu.hidden) openThemeMenu(false);
   tick = window.setInterval(onSecond, 1000);
   if (timed()) setProgress(1 / settings.amount, true);
 }
@@ -624,8 +661,8 @@ function finish() {
   }
   const net = sec > 0 ? Math.max(0, raw - wrong / (sec / 60)) : 0;
   // the job exam check is optional; lessons are practice, not an exam
-  if (!settings.showExam || settings.mode === 'lesson') $('exam').innerHTML = '';
-  else showExam(raw, net, attempted, wrong);
+  lastExam = settings.mode === 'lesson' ? null : [raw, net, attempted, wrong];
+  drawExam();
 
   // save it, unless it was too short to mean anything
   const pb = $('r-pb');
@@ -634,6 +671,10 @@ function finish() {
     const entry: Entry = {
       id: newId(), t: Date.now(), lang: settings.lang, mode: settings.mode, amount: settings.amount, label: testLabel(),
       wpm: round1(wpm), net: round1(net), raw: round1(raw), acc: round1(acc), sec: round1(sec),
+      chars: [c.correct, c.incorrect, c.extra, timed() ? 0 : c.missed],
+      cons: round1(consistency(samples.map(x => x.raw))),
+      words: attempted, wrong,
+      hw: samples.map(x => Math.round(x.wpm)), hr: samples.map(x => Math.round(x.raw)), he: samples.map(x => x.errors),
     };
     const { previousBest } = addEntry(entry);
     saveToAccount(entry);
@@ -649,17 +690,18 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 function testLabel() {
   const amount = settings.mode === 'passage' ? `${settings.amount / 60}m`
     : settings.mode === 'lesson' ? lessonsFor(settings.lang)[settings.amount].name : settings.amount;
-  return `${settings.mode} ${amount}`;
+  const extras = randomWordsMode() ? `${settings.punctuation ? ' punctuation' : ''}${settings.numbers ? ' numbers' : ''}` : '';
+  return `${settings.mode} ${amount}${extras}`;
 }
 
-// ---------- exam check ----------
-// Minimum speeds from recent Bangladesh government job circulars.
-// The circulars do not say how a word is counted; Jolpai Type uses the
-// common 5-keystroke word and the usual net-speed formula.
-const POSTS = [
-  { name: 'Office Assistant-cum-Computer Typist', bangla: 20, english: 20 },
-  { name: 'Computer Operator', bangla: 25, english: 30 },
-];
+// ---------- exam check (minimums in exam.ts) ----------
+let lastExam: [number, number, number, number] | null = null; // the last result's numbers
+
+/** Show or clear the exam check for the result on screen. */
+function drawExam() {
+  if (!settings.showExam || !lastExam) $('exam').innerHTML = '';
+  else showExam(...lastExam);
+}
 
 function showExam(gross: number, net: number, attempted: number, wrong: number) {
   const lang = settings.lang;
@@ -710,32 +752,7 @@ function drawChart(animate = false) {
   const W = svg.clientWidth || 800;
   const H = svg.clientHeight || 200;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  const n = samples.length;
-  if (n === 0) { svg.innerHTML = ''; return; }
-  const padL = 36, padR = 30, padT = 10, padB = 24;
-  const maxY = Math.max(10, ...samples.map(s => Math.max(s.wpm, s.raw)));
-  const top = Math.ceil(maxY / 20) * 20;
-  const maxE = Math.max(1, ...samples.map(s => s.errors));
-  const x = (i: number) => padL + (n === 1 ? 0 : (i / (n - 1)) * (W - padL - padR));
-  const y = (v: number) => padT + (1 - v / top) * (H - padT - padB);
-  const line = (k: 'wpm' | 'raw') => samples.map((s, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(s[k]).toFixed(1)}`).join('');
-
-  let g = '';
-  for (let v = 0; v <= top; v += top / 4) {
-    g += `<line x1="${padL}" x2="${W - padR}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${padL - 8}" y="${y(v) + 4}" class="axis" text-anchor="end">${Math.round(v)}</text>`;
-  }
-  const step = Math.max(1, Math.ceil(n / 10));
-  for (let i = 0; i < n; i += step) g += `<text x="${x(i)}" y="${H - 6}" class="axis" text-anchor="middle">${i + 1}</text>`;
-  let errs = '';
-  samples.forEach((s, i) => {
-    if (!s.errors) return;
-    const ey = padT + (1 - s.errors / maxE) * (H - padT - padB) * 0.9;
-    errs += `<g class="err" transform="translate(${x(i)},${ey})"><path d="M-3,-3L3,3M3,-3L-3,3"/><title>${s.errors} error${s.errors > 1 ? 's' : ''} in second ${i + 1}</title></g>`;
-  });
-  const base = y(0).toFixed(1);
-  const area = `${line('wpm')}L${x(n - 1).toFixed(1)},${base}L${x(0).toFixed(1)},${base}Z`;
-  svg.innerHTML = `<defs><linearGradient id="wpm-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="fill-top"/><stop offset="1" class="fill-bottom"/></linearGradient></defs>`
-    + `${g}<path d="${area}" class="area"/><path d="${line('raw')}" class="raw"/><path d="${line('wpm')}" class="wpm"/>${errs}`;
+  svg.innerHTML = speedChart(W, H, samples.map(s => s.wpm), samples.map(s => s.raw), samples.map(s => s.errors), 'result');
   if (animate) {
     drawIn(svg.querySelector<SVGPathElement>('.raw'));
     drawIn(svg.querySelector<SVGPathElement>('.wpm'));
@@ -743,11 +760,12 @@ function drawChart(animate = false) {
 }
 
 // ---------- pages: test, profile, settings ----------
-type View = 'test' | 'profile' | 'settings';
+type View = 'test' | 'profile' | 'settings' | 'shared';
 let view: View = 'test';
 const profileEl = $('history');
 const settingsEl = $('settings');
-const profileView: ProfileView = { lang: settings.lang, filter: 'all', shown: 25 };
+const profileView: ProfileView = { lang: settings.lang, filter: 'all', shown: 25, open: null };
+let sharedData: SharedData | null = null; // someone's shared profile, when viewing one
 
 function profileUser() {
   const u = currentUser();
@@ -755,15 +773,42 @@ function profileUser() {
 }
 
 function drawProfile() {
-  renderProfile(profileEl, profileView, profileUser());
+  if (view === 'shared' && sharedData) renderProfile(profileEl, profileView, null, { shared: sharedData });
+  else renderProfile(profileEl, profileView, profileUser(), { sharing: !!currentShareId() });
   movePills(profileEl);
+  const results = view === 'shared' && sharedData ? sharedData.results : loadHistory();
+  // draw the opened result's graph at its real size, so the text stays sharp
+  profileEl.querySelectorAll<SVGSVGElement>('.d-chart').forEach(svg => {
+    const e = results.find(x => x.id === svg.dataset.id);
+    if (!e?.hw) return;
+    const W = svg.clientWidth || 800, H = svg.clientHeight || 180;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.innerHTML = speedChart(W, H, e.hw, e.hr ?? e.hw, e.he ?? [], `d-${e.id}`);
+    drawIn(svg.querySelector<SVGPathElement>('.wpm'), 700);
+  });
+}
+
+/** Open or close a result's details. */
+function toggleResult(id: string) {
+  profileView.open = profileView.open === id ? null : id;
+  drawProfile();
+  const row = profileEl.querySelector<HTMLElement>(`.h-row[data-id="${CSS.escape(id)}"]`);
+  row?.focus({ preventScroll: true });
+  if (profileView.open) profileEl.querySelector('.h-detail')?.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'nearest' });
 }
 
 function showView(v: View) {
+  // leaving a shared profile: drop ?p= from the address
+  if (view === 'shared' && v !== 'shared') {
+    history.replaceState(null, '', location.pathname);
+    document.title = 'Jolpai Type';
+    sharedData = null;
+  }
   view = v;
-  profileEl.hidden = v !== 'profile';
+  profileEl.hidden = v !== 'profile' && v !== 'shared';
   settingsEl.hidden = v !== 'settings';
   configEl.hidden = v !== 'test';
+  cornerEl.querySelectorAll<HTMLElement>('[data-toggle]').forEach(b => { b.hidden = v !== 'test'; });
   $('nav-test').classList.toggle('active', v === 'test');
   $('nav-history').classList.toggle('active', v === 'profile');
   $('nav-settings').classList.toggle('active', v === 'settings');
@@ -774,9 +819,11 @@ function showView(v: View) {
   resultEl.hidden = true;
   document.body.classList.remove('typing');
   window.scrollTo({ top: 0 });
+  if (v === 'shared') return; // openShared() draws it once loaded
   if (v === 'profile') {
     profileView.lang = settings.lang;
     profileView.shown = 25;
+    profileView.open = null;
     drawProfile();
     enter(profileEl);
     drawIn(profileEl.querySelector<SVGPathElement>('.h-chart .wpm'), 1100);
@@ -787,11 +834,51 @@ function showView(v: View) {
   }
 }
 
+/** Show someone's shared profile, from a ?p= link. */
+async function openShared(id: string) {
+  showView('shared');
+  profileEl.innerHTML = `<div class="h-empty-box">${icon('user', 32)}<p class="h-empty">Loading the profile…</p></div>`;
+  let data: SharedData | null = null;
+  try { data = await loadShared(id); } catch (err) { console.warn('Could not load the shared profile', err); }
+  if (view !== 'shared') return; // the visitor moved on while it loaded
+  if (!data) {
+    profileEl.innerHTML = `<div class="h-empty-box">${icon('user', 32)}<p class="h-empty">This profile is not shared any more, or the link is wrong.</p>
+      <button id="p-start" class="btn primary">${icon('keyboard', 15)}start typing</button></div>`;
+    return;
+  }
+  sharedData = data;
+  document.title = `${data.name} · Jolpai Type`;
+  // open on the language they type most
+  const bn = data.results.filter(e => e.lang === 'bangla').length;
+  profileView.lang = bn * 2 >= data.results.length && bn > 0 ? 'bangla' : 'english';
+  profileView.filter = 'all';
+  profileView.shown = 25;
+  profileView.open = null;
+  drawProfile();
+  enter(profileEl);
+  drawIn(profileEl.querySelector<SVGPathElement>('.h-chart .wpm'), 1100);
+}
+
+const sharePanel = new SharePanel({
+  signedIn: () => !!currentUser(),
+  shareId: currentShareId,
+  name: () => currentUser()?.name || 'my',
+  start: startSharing,
+  stop: stopSharing,
+  signIn: () => { signIn().catch(err => alert(`Sign-in failed: ${(err as Error).message}`)); },
+}, () => { if (view === 'profile') drawProfile(); });
+
 $('nav-history').addEventListener('click', () => showView(view === 'profile' ? 'test' : 'profile'));
 $('nav-settings').addEventListener('click', () => showView(view === 'settings' ? 'test' : 'settings'));
 $('nav-test').addEventListener('click', () => showView('test'));
 $('nav-test').classList.add('active');
+profileEl.addEventListener('keydown', e => {
+  const row = (e.target as HTMLElement).closest<HTMLElement>('.h-row');
+  if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleResult(row.dataset.id!); }
+});
 profileEl.addEventListener('click', e => {
+  const row = (e.target as HTMLElement).closest<HTMLElement>('.h-row');
+  if (row) { toggleResult(row.dataset.id!); return; }
   const b = (e.target as HTMLElement).closest('button');
   if (!b) return;
   if (b.dataset.hlang) {
@@ -804,6 +891,12 @@ profileEl.addEventListener('click', e => {
   } else if (b.id === 'h-more') {
     profileView.shown += 25;
     drawProfile();
+  } else if (b.id === 'p-share') {
+    sharePanel.open();
+  } else if (b.id === 'p-start') {
+    showView('test');
+  } else if (b.id === 'p-sign-out') {
+    signOut().catch(err => alert(`Could not sign out: ${(err as Error).message}`));
   } else if (b.id === 'p-sign-in') {
     signIn().catch(err => alert(`Sign-in failed: ${(err as Error).message}`));
   } else if (b.id === 'h-clear') {
@@ -908,62 +1001,77 @@ document.fonts?.ready.then(() => { movePills(); updateCaret(); });
 // ---------- account ----------
 const accountEl = $('account');
 
+/** Signed out: a "sign in" button. Signed in: your photo becomes the profile button. */
 function renderAccount(u: AccountUser | null) {
-  if (!accountsEnabled()) { accountEl.hidden = true; return; }
-  accountEl.hidden = false;
-  if (!u) {
-    accountEl.innerHTML = `<button id="sign-in" class="sign-in" title="Sign in to save your progress on every device">${icon('login', 15)}<span>sign in</span></button>`;
-    return;
+  const btn = $('nav-history');
+  if (u) {
+    const initial = esc((u.name || u.email || '?').trim().charAt(0).toUpperCase());
+    btn.innerHTML = u.photo
+      ? `<img src="${esc(u.photo)}" alt="" referrerpolicy="no-referrer" />`
+      : `<span class="initial">${initial}</span>`;
+    btn.classList.add('has-avatar');
+    btn.title = `${u.name}: your profile`;
+  } else {
+    btn.innerHTML = icon('user', 20);
+    btn.classList.remove('has-avatar');
+    btn.title = 'Your profile: personal bests, stats and history';
   }
-  const initial = esc((u.name || u.email || '?').trim().charAt(0).toUpperCase());
-  const avatar = u.photo
-    ? `<img src="${esc(u.photo)}" alt="" referrerpolicy="no-referrer" />`
-    : `<span>${initial}</span>`;
-  accountEl.innerHTML = `
-    <button id="account-btn" class="avatar" aria-haspopup="true" aria-expanded="false" title="${esc(u.name)}">${avatar}</button>
-    <div id="account-menu" class="account-menu" hidden>
-      <div class="am-name">${esc(u.name)}</div>
-      <div class="am-email">${esc(u.email)}</div>
-      <p class="am-note">${icon('cloud', 14)}Your results are saved to your account.</p>
-      <button id="sign-out" class="am-out">${icon('logout', 14)}sign out</button>
-    </div>`;
+  accountEl.hidden = !accountsEnabled() || !!u;
+  if (!u) accountEl.innerHTML = `<button id="sign-in" class="sign-in" title="Sign in to save your progress on every device">${icon('login', 15)}<span>sign in</span></button>`;
 }
 
 accountEl.addEventListener('click', async e => {
-  const b = (e.target as HTMLElement).closest('button');
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('#sign-in');
   if (!b) return;
-  const menu = $('account-menu') as HTMLElement | null;
-  if (b.id === 'sign-in') {
-    b.classList.add('busy');
-    b.querySelector('span')!.textContent = 'signing in…';
-    try { await signIn(); } catch (err) { alert(`Sign-in failed: ${(err as Error).message}`); }
-    renderAccount(currentUser());
-  } else if (b.id === 'account-btn' && menu) {
-    menu.hidden = !menu.hidden;
-    b.setAttribute('aria-expanded', String(!menu.hidden));
-  } else if (b.id === 'sign-out') {
-    await signOut();
-  }
-});
-document.addEventListener('click', e => {
-  const menu = document.getElementById('account-menu');
-  if (menu && !menu.hidden && !accountEl.contains(e.target as Node)) menu.hidden = true;
+  b.classList.add('busy');
+  b.querySelector('span')!.textContent = 'signing in…';
+  try { await signIn(); } catch (err) { alert(`Sign-in failed: ${(err as Error).message}`); }
+  renderAccount(currentUser());
 });
 
 renderAccount(null);
 initAccount(u => {
   renderAccount(u);
   if (view === 'profile') drawProfile();
+  if (u && document.querySelector('.share-dlg[open]')) sharePanel.open();
 }).catch(err => console.warn('Accounts are unavailable', err));
 
-const drawFooterThemes = renderThemePicker($('themes'), () => {
-  if (view === 'profile') drawProfile();
+// ---------- theme menu in the corner ----------
+const themeMenu = $('theme-menu');
+const themeBtn = $('theme-btn');
+
+/** Show the current theme's colours on the corner button. */
+function drawThemeButton() {
+  const t = THEMES.find(x => x.id === currentTheme()) ?? THEMES[0];
+  themeBtn.style.setProperty('--sw-bg', t.bg);
+  themeBtn.style.setProperty('--sw-main', t.main);
+  themeBtn.dataset.tip = `theme: ${t.name}`;
+}
+
+function openThemeMenu(open: boolean) {
+  themeMenu.hidden = !open;
+  themeBtn.setAttribute('aria-expanded', String(open));
+  themeBtn.classList.toggle('active', open);
+  if (open) { enter(themeMenu); themeMenu.querySelector<HTMLElement>('.theme-row.active')?.focus(); }
+}
+
+themeBtn.addEventListener('click', () => openThemeMenu(themeMenu.hidden));
+document.addEventListener('click', e => {
+  if (!themeMenu.hidden && !cornerEl.contains(e.target as Node)) openThemeMenu(false);
+});
+
+const drawMenuThemes = renderThemePicker($('themes'), () => {
+  drawThemeButton();
+  if (view === 'profile' || view === 'shared') drawProfile();
   if (view === 'settings') refreshSettings();
-  if (view === 'test' && !finished) focusInput();
 });
 /** Redraw the theme pickers after the theme changed elsewhere. */
-function drawThemes() { drawFooterThemes(); }
+function drawThemes() { drawMenuThemes(); drawThemeButton(); }
+drawThemeButton();
 
 applyPrefs();
 renderConfig();
 reset();
+// a shared-profile link: ?p=<share id>
+const sharedParam = new URLSearchParams(location.search).get('p');
+if (sharedParam) openShared(sharedParam);

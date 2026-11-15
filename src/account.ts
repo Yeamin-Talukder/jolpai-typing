@@ -15,9 +15,11 @@ const OWNER_KEY = 'jolpai-type:owner'; // whose results are in this browser ('' 
 
 let fb: Fb | null = null;
 let user: AccountUser | null = null;
+let shareId: string | null = null; // set while the profile is shared
 
 export const accountsEnabled = () => firebaseConfig !== null;
 export const currentUser = () => user;
+export const currentShareId = () => shareId;
 
 function getOwner(): string {
   try { return localStorage.getItem(OWNER_KEY) || ''; } catch { return ''; }
@@ -56,6 +58,7 @@ export async function initAccount(onChange: (u: AccountUser | null) => void) {
       // next person on a shared computer does not see them.
       if (getOwner()) { clearHistory(); setOwner(''); }
       user = null;
+      shareId = null;
     }
     onChange(user);
   });
@@ -78,9 +81,13 @@ async function syncHistory() {
     for (const e of upload.slice(i, i + 400)) batch.set(f.doc(col, e.id), e);
     await batch.commit();
   }
-  await f.setDoc(f.doc(db, 'users', u.uid), { name: u.name, lastSeen: f.serverTimestamp() }, { merge: true });
+  const profileRef = f.doc(db, 'users', u.uid);
+  const profile = await f.getDoc(profileRef);
+  shareId = (profile.data()?.shareId as string | null | undefined) ?? null;
+  await f.setDoc(profileRef, { name: u.name, lastSeen: f.serverTimestamp() }, { merge: true });
   replaceHistory(merged);
   setOwner(u.uid);
+  if (shareId) publishShare(); // name, photo or results may have changed
 }
 
 export async function signIn() {
@@ -107,6 +114,89 @@ export function saveToAccount(e: Entry) {
   setOwner(user.uid);
   f.setDoc(f.doc(db, 'users', user.uid, 'results', e.id), cleanEntry(e))
     .catch(err => console.warn('Could not save the result to your account', err));
+  if (shareId) publishShare();
+}
+
+// ---------- shared profile ----------
+// A public copy of the profile at shared/{shareId}, made only when the owner
+// asks for it. It holds name, photo, join date, totals and recent results;
+// never the email address.
+
+/** What a shared profile holds, as read back for viewers. */
+export interface SharedProfile {
+  name: string; photo: string | null; joined: number | null; updated: number | null;
+  tests: number; time: number; results: Entry[];
+}
+
+const SHARE_RESULTS = 500;  // newest results in the public copy
+const SHARE_GRAPHS = 30;    // of those, how many keep their speed graph
+
+function newShareId() {
+  const abc = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  return Array.from(bytes, b => abc[b % abc.length]).join('');
+}
+
+function snapshot(u: AccountUser, f: FsMod) {
+  const all = loadHistory();
+  const recent = all.slice(-SHARE_RESULTS).map((e, i, list) => {
+    const c = cleanEntry(e);
+    if (i < list.length - SHARE_GRAPHS) { delete c.hw; delete c.hr; delete c.he; }
+    return c;
+  });
+  return {
+    owner: u.uid, name: u.name, photo: u.photo, joined: u.joined, updated: f.serverTimestamp(),
+    tests: all.length, time: Math.round(all.reduce((a, e) => a + e.sec, 0)), results: recent,
+  };
+}
+
+let publishTimer = 0;
+/** Update the public copy soon (several quick changes make one write). */
+export function publishShare() {
+  clearTimeout(publishTimer);
+  publishTimer = window.setTimeout(() => {
+    if (!user || !fb || !shareId) return;
+    const { db, f } = fb;
+    f.setDoc(f.doc(db, 'shared', shareId), snapshot(user, f))
+      .catch(err => console.warn('Could not update your shared profile', err));
+  }, 1500);
+}
+
+/** Make the profile public; returns its share id. */
+export async function startSharing(): Promise<string> {
+  if (!user) throw new Error('Sign in first');
+  const { db, f } = await load();
+  const id = shareId ?? newShareId();
+  await f.setDoc(f.doc(db, 'shared', id), snapshot(user, f));
+  await f.setDoc(f.doc(db, 'users', user.uid), { name: user.name, shareId: id }, { merge: true });
+  shareId = id;
+  return id;
+}
+
+/** Delete the public copy; the link stops working. */
+export async function stopSharing() {
+  if (!user || !shareId) return;
+  const { db, f } = await load();
+  clearTimeout(publishTimer);
+  await f.deleteDoc(f.doc(db, 'shared', shareId));
+  await f.setDoc(f.doc(db, 'users', user.uid), { name: user.name, shareId: null }, { merge: true });
+  shareId = null;
+}
+
+/** Read someone's shared profile; null if it does not exist (or was unshared). */
+export async function loadShared(id: string): Promise<SharedProfile | null> {
+  if (!accountsEnabled()) return null;
+  const { db, f } = await load();
+  const snap = await f.getDoc(f.doc(db, 'shared', id));
+  if (!snap.exists()) return null;
+  const d = snap.data();
+  const updated = d.updated && typeof d.updated.toMillis === 'function' ? d.updated.toMillis() : null;
+  return {
+    name: String(d.name || 'someone'), photo: typeof d.photo === 'string' ? d.photo : null,
+    joined: typeof d.joined === 'number' ? d.joined : null, updated,
+    tests: Number(d.tests) || 0, time: Number(d.time) || 0,
+    results: Array.isArray(d.results) ? (d.results as Entry[]).map(cleanEntry).sort((a, b) => a.t - b.t) : [],
+  };
 }
 
 /** Delete every result in the account. */
@@ -121,4 +211,5 @@ export async function clearAccountHistory() {
     snap.docs.forEach(d => batch.delete(d.ref));
     await batch.commit();
   }
+  if (shareId) publishShare(); // the shared copy empties too
 }

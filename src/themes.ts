@@ -30,7 +30,8 @@ export function renderThemePicker(el: HTMLElement, onChange: () => void) {
   const draw = () => {
     const cur = currentTheme();
     el.innerHTML = THEMES.map(t =>
-      `<button data-theme-id="${t.id}" class="swatch ${t.id === cur ? 'active' : ''}" title="${t.name} · ${t.bn}" aria-label="${t.name} theme" aria-pressed="${t.id === cur}" style="--sw-bg:${t.bg};--sw-main:${t.main}"></button>`).join('');
+      `<button data-theme-id="${t.id}" class="theme-row ${t.id === cur ? 'active' : ''}" aria-pressed="${t.id === cur}" style="--sw-bg:${t.bg};--sw-main:${t.main}">`
+      + `<span class="sw-dot"></span><span class="tr-name">${t.name}</span><span class="tr-bn">${t.bn}</span></button>`).join('');
   };
   draw();
   el.addEventListener('click', e => {

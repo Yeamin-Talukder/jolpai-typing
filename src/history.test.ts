@@ -35,7 +35,7 @@ describe('history', () => {
     addEntry(entry({ wpm: 31 }));
     addEntry(entry({ lang: 'english', wpm: 55 }));
     const el = document.createElement('div');
-    renderProfile(el, { lang: 'bangla', filter: 'all', shown: 25 }, null);
+    renderProfile(el, { lang: 'bangla', filter: 'all', shown: 25, open: null }, null);
     // look only at the speed figures: dates and times can contain any digits
     const speeds = [...el.querySelectorAll('.val')].map(v => v.textContent).join(' ');
     expect(speeds).toContain('31');
@@ -49,5 +49,13 @@ describe('history', () => {
     expect(streak([at(0), at(1), at(2), at(4)], now)).toBe(3);
     expect(streak([at(1), at(2)], now)).toBe(2); // nothing today yet
     expect(streak([at(2), at(3)], now)).toBe(0);
+  });
+
+  it('keeps per-second graphs only for the newest 200 results', () => {
+    for (let i = 0; i < 205; i++) addEntry(entry({ hw: [1, 2], hr: [1, 2], he: [0, 0], cons: 80 }));
+    const list = loadHistory();
+    expect(list[0].hw).toBeUndefined();
+    expect(list[0].cons).toBe(80);
+    expect(list[204].hw).toEqual([1, 2]);
   });
 });
