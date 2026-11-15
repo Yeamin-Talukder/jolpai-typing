@@ -223,5 +223,27 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
     nextTab.focus();
     nextTab.click();
   });
-  el.querySelector<HTMLInputElement>('[data-openall]')!.onchange = e => act.openAll((e.target as HTMLInputElement).checked);
+  // open every lesson: let the switch slide, then unlock (or lock) the cards in place
+  el.querySelector<HTMLInputElement>('[data-openall]')!.onchange = e => {
+    const on = (e.target as HTMLInputElement).checked;
+    d.openAll = on;
+    act.openAll(on);
+    const was = new Set([...el.querySelectorAll<HTMLElement>('.ln-lesson[aria-disabled="true"]')].map(b => b.dataset.lesson));
+    window.setTimeout(() => {
+      if (!el.isConnected || d.openAll !== on) return;
+      el.querySelectorAll<HTMLElement>('.ln-tab').forEach(tab => {
+        const u = Number(tab.dataset.unit);
+        tab.classList.toggle('locked', !lessonsInUnit(u).some(l => isUnlocked(d, LESSONS.indexOf(l))));
+      });
+      const panel = el.querySelector<HTMLElement>('.ln-panel')!;
+      const top = panel.scrollTop;
+      panel.innerHTML = unitPanel(d, shownUnit!, next.id);
+      panel.scrollTop = top;
+      panel.querySelectorAll<HTMLElement>('.ln-lesson').forEach(b => {
+        const locked = b.getAttribute('aria-disabled') === 'true';
+        if (was.has(b.dataset.lesson) !== locked) b.classList.add(locked ? 'just-locked' : 'just-opened');
+        else b.style.animation = 'none';
+      });
+    }, 240);
+  };
 }

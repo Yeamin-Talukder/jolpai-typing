@@ -6,7 +6,7 @@ import type { ExamScore } from './exam-score';
 import { loadSetup, MockExam, type ExamSetup } from './exam';
 import { renderLearnPage } from './page';
 import { LessonPlayer } from './player';
-import { applyExam, loadLearn, saveLearn, type ExamRec, type Pending } from './progress';
+import { applyExam, loadLearn, saveLearn, type ExamRec, type LearnData, type Pending } from './progress';
 
 export interface LearnHooks {
   prefs: Prefs;
@@ -20,11 +20,16 @@ export interface LearnHooks {
   onExamDone(rec: ExamRec, score: ExamScore, setup: ExamSetup): void;
 }
 
+/** Everything the course page shows (not the queue of unsaved runs). */
+const shownState = (d: LearnData) => JSON.stringify({ ...d, pending: undefined });
+
 export class Learn {
   private el: HTMLElement;
   private h: LearnHooks;
   private player: LessonPlayer | null = null;
   private exam: MockExam | null = null;
+  /** What the course page last showed, so a sync that changes nothing does not redraw it. */
+  private drawn = '';
 
   constructor(el: HTMLElement, hooks: LearnHooks) {
     this.el = el;
@@ -40,26 +45,31 @@ export class Learn {
   }
 
   /** Show the course page. */
-  show() {
+  show(quiet = false) {
     this.stop();
     this.el.classList.remove('playing');
-    renderLearnPage(this.el, loadLearn(), {
+    const d = loadLearn();
+    this.drawn = shownState(d);
+    renderLearnPage(this.el, d, {
       start: l => this.start(l),
       exam: () => this.startExam(),
       signedIn: this.h.signedIn(),
       openAll: on => {
+        // the page updates itself in place, so the switch can slide
         const d = loadLearn(); d.openAll = on; saveLearn(d);
+        this.drawn = shownState(d);
         this.h.onProgress({ openAll: on });
-        this.show();
       },
       reset: () => { this.h.onReset().catch(err => alert(`Could not reset the course in your account: ${(err as Error).message}`)).finally(() => this.show()); },
     });
-    this.enter();
+    if (!quiet) this.enter();
   }
 
   /** Redraw the course page after the account changed it (not during a lesson or exam). */
   refresh() {
-    if (!this.player && !this.exam && this.el.isConnected && !this.el.hidden) this.show();
+    if (this.player || this.exam || !this.el.isConnected || this.el.hidden) return;
+    if (shownState(loadLearn()) === this.drawn) return;
+    this.show(true);
   }
 
   /** Start (or restart) a lesson. */

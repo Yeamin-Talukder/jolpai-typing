@@ -1070,8 +1070,17 @@ const bool = (key: BoolPref) =>
 const pick = (key: PickPref) =>
   ({ get: () => prefs[key] as string, set: (v: string) => { (prefs as unknown as Record<string, string>)[key] = v; } });
 
+/** A typing line that shows the chosen text size and caret, typing itself. */
+function appearancePreview() {
+  const text = 'practise a little every day';
+  return `<div class="s-preview" data-pv-type style="--pv-fs:${Math.min(FONT_PX[prefs.fontSize], 36)}px">
+    <span class="s-pv-label">${icon('eye', 13)}preview</span>
+    <div class="s-pv-line"><span class="s-pv-text">${[...text].map(c => `<i>${c === ' ' ? '&nbsp;' : c}</i>`).join('')}</span><b class="s-pv-caret ${prefs.caret}${prefs.smoothCaret ? ' smooth' : ''}"></b></div>
+  </div>`;
+}
+
 const SECTIONS: Section[] = [
-  { title: 'behaviour', options: [
+  { title: 'behaviour', icon: 'pointer', desc: 'How a test reacts to your mistakes.', options: [
     { id: 'stopOnError', icon: 'shield', title: 'stop on error',
       desc: 'Letter: a wrong key is counted but not typed. Word: you cannot move on until the word is right.',
       choices: choices(['off', 'off'], ['letter', 'letter'], ['word', 'word']), ...pick('stopOnError') },
@@ -1082,29 +1091,30 @@ const SECTIONS: Section[] = [
     { id: 'exam', icon: 'exam', title: 'exam check', desc: 'Show the government job typing speed check on the result.',
       choices: ON_OFF, get: () => onOff(settings.showExam), set: v => { settings.showExam = v === 'on'; } },
   ] },
-  { title: 'live stats', options: [
+  { title: 'live stats', icon: 'chart', desc: 'Numbers shown above the words while you type.', options: [
     { id: 'liveSpeed', icon: 'gauge', title: 'live speed', desc: 'Your speed in wpm while you type, updated every second.', ...bool('liveSpeed') },
     { id: 'liveAcc', icon: 'target', title: 'live accuracy', desc: 'The share of keys you pressed correctly so far.', ...bool('liveAcc') },
     { id: 'liveBurst', icon: 'zap', title: 'live burst', desc: 'How fast you typed the last word, in wpm.', ...bool('liveBurst') },
     { id: 'timerBar', icon: 'bar', title: 'progress bar', desc: 'A thin bar next to the timer that fills as the test goes on.', ...bool('timerBar') },
   ] },
-  { title: 'appearance', options: [
+  { title: 'appearance', icon: 'palette', desc: 'How the words, the caret and the whole site look.', preview: appearancePreview, options: [
     { id: 'fontSize', icon: 'font', title: 'text size', desc: 'Size of the words you type.',
       choices: choices(['s', 'small'], ['m', 'medium'], ['l', 'large'], ['xl', 'extra large']), ...pick('fontSize') },
     { id: 'caret', icon: 'cursor', title: 'caret style', desc: 'The marker that shows where you are typing.',
       choices: choices(['line', 'line'], ['block', 'block'], ['underline', 'underline'], ['off', 'off']), ...pick('caret') },
-    { id: 'smoothCaret', icon: 'cursor', title: 'smooth caret', desc: 'The caret glides from letter to letter instead of jumping.', ...bool('smoothCaret') },
+    { id: 'smoothCaret', icon: 'next', title: 'smooth caret', desc: 'The caret glides from letter to letter instead of jumping.', ...bool('smoothCaret') },
     { id: 'keyboard', icon: 'keyboard', title: 'on-screen keyboard', desc: 'Show the keyboard under the words, with the next key lit up.',
       choices: ON_OFF, get: () => onOff(settings.showKeyboard), set: v => { settings.showKeyboard = v === 'on'; } },
     { id: 'theme', icon: 'palette', title: 'theme', desc: 'Colours for the whole site.',
-      choices: THEMES.map(t => ({ value: t.id, label: t.name })), get: currentTheme, set: v => { applyTheme(v); drawThemes(); } },
+      choices: THEMES.map(t => ({ value: t.id, label: t.name, colors: [t.bg, t.main] as [string, string] })), get: currentTheme, set: v => { applyTheme(v); drawThemes(); } },
   ] },
-  { title: 'sound', options: [
+  { title: 'sound', icon: 'volume', desc: 'Sounds while you type.', options: [
     { id: 'sound', icon: 'volume', title: 'key sound', desc: 'A sound on every key press. Pick one to hear it.',
       choices: choices(['off', 'off'], ['click', 'click'], ['pop', 'pop'], ['typewriter', 'typewriter']), ...pick('sound') },
-    { id: 'errorSound', icon: 'volume', title: 'error sound', desc: 'A low buzz when you press a wrong key.', ...bool('errorSound') },
-  ],
-  extra: `<div class="s-row s-reset"><div class="s-text"><div class="s-title">${icon('restart', 16)}reset settings</div><p>Put every setting on this page back to how it started. Your results are kept.</p></div><button id="s-reset" class="btn danger">${icon('restart', 15)}reset settings</button></div>` },
+    { id: 'errorSound', icon: 'x', title: 'error sound', desc: 'A low buzz when you press a wrong key.', ...bool('errorSound') },
+  ] },
+  { title: 'reset', icon: 'restart', desc: 'Start over with the settings. Your results are kept.', options: [],
+    extra: `<div class="s-row s-reset"><span class="s-ico">${icon('restart', 18)}</span><div class="s-text"><div class="s-title">reset settings</div><p>Put every setting on this page back to how it started. Your results are kept.</p></div><div class="s-ctl"><button id="s-reset" class="btn danger">${icon('restart', 15)}reset</button></div></div>` },
 ];
 
 const refreshSettings = renderSettings(settingsEl, SECTIONS, id => {
