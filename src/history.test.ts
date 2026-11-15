@@ -35,7 +35,7 @@ describe('history', () => {
     addEntry(entry({ wpm: 31 }));
     addEntry(entry({ lang: 'english', wpm: 55 }));
     const el = document.createElement('div');
-    renderProfile(el, { lang: 'bangla', filter: 'all', shown: 25, open: null, dev: 'desktop', tab: 'progress' }, null);
+    renderProfile(el, { lang: 'bangla', filter: 'all', shown: 25, open: null, dev: 'desktop' }, null);
     // look only at the speed figures: dates and times can contain any digits
     const speeds = [...el.querySelectorAll('.val')].map(v => v.textContent).join(' ');
     expect(speeds).toContain('31');
