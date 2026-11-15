@@ -1686,3 +1686,164 @@ body.focus .learn { max-width: 1280px; }
   .lp-hands { height: calc(var(--kh) * 2.6); }
   .lp-live { width: auto; }
 }
+
+/* =====================================================================
+   Course page as a one-screen dashboard
+   [ hero: ring · title + continue · stats ]
+   [ course map: unit tabs + lessons ] [ mock exam / key mastery ]
+   [ slim footer ]
+   ===================================================================== */
+body[data-view="learn"] .bottom { display: none; }
+body[data-view="learn"] main { padding-top: 0; }
+
+.ln-dash {
+  display: grid; gap: clamp(10px, 1.6dvh, 16px);
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  grid-template-areas: "hero hero" "map side" "foot foot";
+}
+.ln-dash > * { animation-delay: 0s; }
+.ln-dash .ln-hero { grid-area: hero; grid-template-columns: auto minmax(0, 1fr) auto; gap: clamp(16px, 2.4vw, 32px); padding: clamp(14px, 2.4dvh, 26px) clamp(18px, 2.4vw, 30px); }
+.ln-dash .ln-hero::after { font-size: 90px; bottom: -28px; right: 10px; opacity: .04; }
+.ln-dash .ln-ring { width: clamp(84px, 13dvh, 124px); height: clamp(84px, 13dvh, 124px); }
+.ln-dash .ln-ring-text b { font-size: clamp(22px, 3.4dvh, 30px); }
+.ln-dash .ln-eyebrow { flex-wrap: wrap; }
+.ln-how-btn {
+  margin-left: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  background: var(--bg); color: var(--sub); font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 500;
+  transition: color var(--fast), background var(--fast);
+}
+.ln-how-btn:hover { color: var(--main); background: var(--tint); }
+.ln-how-btn.glow { color: var(--main); animation: lesson-glow 2.4s ease-in-out infinite; }
+.ln-dash .ln-hero h1 { margin: clamp(6px, 1dvh, 10px) 0 0; font-size: clamp(22px, 3.6dvh, 34px); }
+.ln-dash .ln-hero h1 .ln-bn { display: inline-block; margin-left: 10px; font-size: .5em; font-weight: 400; vertical-align: middle; }
+.ln-dash .ln-cta { margin-top: clamp(10px, 1.8dvh, 18px); gap: 16px; }
+.ln-dash .ln-go { padding: clamp(10px, 1.6dvh, 14px) 20px; }
+.ln-dash .ln-next { display: flex; flex-direction: column; }
+.ln-dash .ln-stats { grid-template-columns: repeat(2, minmax(118px, auto)); gap: 8px; }
+.ln-dash .ln-stat { padding: clamp(8px, 1.3dvh, 12px) 14px; background: var(--bg); }
+.ln-dash .ln-stat b { font-size: clamp(18px, 2.8dvh, 24px); }
+.ln-dash .ln-stat span { font-size: 12px; }
+
+/* course map */
+.ln-map { grid-area: map; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: clamp(12px, 2dvh, 18px); border-radius: 20px; background: var(--sub-alt); }
+.ln-tabs { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.ln-tab {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 10px; border-radius: 12px;
+  background: var(--bg); color: var(--sub); overflow: hidden; transition: color var(--fast), background var(--fast), transform var(--med) var(--ease), box-shadow var(--fast);
+}
+.ln-tab:hover { color: var(--text); transform: translateY(-2px); }
+.ln-tab.locked { opacity: .6; }
+.ln-tab.active { background: var(--tint); color: var(--main); box-shadow: inset 0 0 0 1.5px var(--main); }
+.ln-tab-n { width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center; font: 600 13px var(--font-mono); background: var(--sub-alt); color: inherit; }
+.ln-tab.done .ln-tab-n { background: var(--main); color: var(--bg); }
+.ln-tab.here:not(.done) .ln-tab-n { box-shadow: 0 0 0 2px var(--main); }
+.ln-tab-t { max-width: 100%; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ln-tab i { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, var(--main) var(--p), transparent var(--p)); }
+.ln-panel { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; padding: 2px; }
+.ln-panel.enter > * { animation: rise .35s var(--ease) both; }
+.ln-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.ln-panel-head h2 { margin: 0; font-size: clamp(17px, 2.4dvh, 20px); font-weight: 600; color: var(--text); }
+.ln-panel-head h2 .bn { margin-left: 6px; font-size: .8em; font-weight: 400; color: var(--sub); }
+.ln-panel-head p { margin: 3px 0 0; color: var(--sub); font-size: 13.5px; line-height: 1.5; }
+.ln-panel-head .ln-unit-prog { flex: none; width: 120px; }
+.ln-dash .ln-lessons { margin-top: 0; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.ln-dash .ln-lesson { padding: clamp(10px, 1.6dvh, 14px) 14px; animation: rise .4s var(--ease) both; animation-delay: calc(var(--i) * 40ms); }
+.ln-dash .ln-l-bn { font-size: clamp(18px, 2.8dvh, 22px); }
+
+/* side: mock exam and key mastery */
+.ln-side { grid-area: side; min-height: 0; display: flex; flex-direction: column; gap: clamp(10px, 1.6dvh, 16px); }
+.ln-dash .ln-exam { display: flex; flex-direction: column; gap: 8px; padding: clamp(12px, 2dvh, 18px) clamp(14px, 1.6vw, 20px); border-radius: 20px; }
+.ln-exam-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ln-dash .ln-exam h2 { margin: 4px 0 0; font-size: clamp(16px, 2.4dvh, 20px); }
+.ln-dash .ln-exam p { margin: 0; font-size: 13px; line-height: 1.5; }
+.ln-dash .ln-exam-row { padding: 8px 12px; }
+.ln-dash .ln-exam-net b { font-size: 18px; }
+.ln-dash .ln-mastery { flex: 1; min-height: 0; gap: 8px; padding: clamp(12px, 2dvh, 18px) clamp(14px, 1.6vw, 20px); container-type: inline-size; overflow: hidden; }
+.ln-mastery-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ln-mastery-head h2 { font-size: 16px; }
+.ln-dash .ln-legend { font-size: 11px; gap: 6px; }
+.ln-dash .ln-grad { width: 70px; height: 6px; }
+.ln-dash .ln-weak { gap: 6px; }
+.ln-dash .ln-weak .btn { margin-left: auto; padding: 7px 12px; }
+.ln-dash .ln-weak-none { font-size: 13px; }
+.ln-dash .chip { padding: 4px 8px; }
+.ln-dash .chip b { font-size: 15px; }
+
+/* the slim footer */
+.ln-dash .ln-foot { grid-area: foot; flex-wrap: nowrap; font-size: 13px; }
+.ln-dash .ln-note { width: auto; flex: 1; justify-content: center; margin: 0; }
+
+/* how-it-works pop-up */
+.how-dlg { width: min(760px, calc(100vw - 32px)); }
+.ln-how { margin: 6px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; counter-reset: m; }
+.ln-how li { position: relative; padding: 14px; border-radius: 14px; background: var(--bg); counter-increment: m; animation: rise .4s var(--ease) both; }
+.ln-how li:nth-child(2) { animation-delay: .05s; } .ln-how li:nth-child(3) { animation-delay: .1s; } .ln-how li:nth-child(4) { animation-delay: .15s; }
+.ln-how li::before { content: counter(m); position: absolute; top: 10px; right: 12px; font: 600 13px var(--font-mono); color: var(--sub); }
+.ln-how li > span { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--tint); color: var(--main); }
+.ln-how li > span svg { width: 20px; height: 20px; }
+.ln-how li > span svg:not(.icon) { fill: currentColor; }
+.ln-how b { display: block; margin-top: 8px; color: var(--text); }
+.ln-how p { margin: 4px 0 0; color: var(--sub); font-size: 13.5px; line-height: 1.5; }
+.ln-how-more { margin: 12px 0 0; color: var(--sub); font-size: 13.5px; line-height: 1.5; }
+
+/* desktop: exactly one screen */
+@media (min-width: 1000px) and (min-height: 560px) {
+  body[data-view="learn"] #app { height: 100dvh; min-height: 0; grid-template-rows: auto minmax(0, 1fr); padding-top: clamp(12px, 2.4dvh, 28px); padding-bottom: clamp(12px, 2.4dvh, 28px); gap: clamp(10px, 2dvh, 24px); }
+  body[data-view="learn"] main { min-height: 0; }
+  body[data-view="learn"] .learn:not(.playing) { flex: 1; min-height: 0; }
+  .learn:not(.playing) .ln-dash { height: 100%; grid-template-rows: auto minmax(0, 1fr) auto; }
+  /* the heatmap keyboard fills its card: key size from the card width and the screen height */
+  /* the card's height is set by the layout, so the keys can be sized from both its width and height */
+  .ln-dash .ln-mastery { container-type: size; }
+  .ln-dash .ln-heat { --hk: min(calc(100cqw / 17.4), calc((100cqh - 66px) / 5.7), 30px); gap: calc(var(--hk) * .1); align-self: center; }
+  .ln-dash .ln-heat .kb-row { gap: calc(var(--hk) * .1); }
+  .ln-dash .ln-heat .kb-key { width: var(--hk); height: var(--hk); border-radius: calc(var(--hk) * .2); font-size: calc(var(--hk) * .44); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .2); }
+  .ln-dash .ln-heat .kb-key .hi, .ln-dash .ln-heat .kb-key .en { display: none; }
+  .ln-dash .ln-heat .kb-key.wide { min-width: calc(var(--hk) * 1.5); padding: 0; font-size: calc(var(--hk) * .3); }
+  .ln-dash .ln-heat .kb-key.space { width: calc(var(--hk) * 6.5); }
+  .ln-dash .ln-heat .kb-key.home::after { bottom: 2px; width: 6px; }
+}
+
+/* narrow or short screens: a normal scrolling page */
+@media (max-width: 999px), (max-height: 559px) {
+  .ln-dash { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "map" "side" "foot"; }
+  .ln-dash .ln-hero { grid-template-columns: auto minmax(0, 1fr); }
+  .ln-dash .ln-stats { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ln-tabs { display: flex; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .ln-tab { flex: 0 0 auto; min-width: 84px; }
+  .ln-dash .ln-foot { flex-wrap: wrap; }
+}
+@media (max-width: 700px) {
+  .ln-dash .ln-hero { grid-template-columns: minmax(0, 1fr); text-align: left; }
+  .ln-dash .ln-ring { order: 0; }
+  .ln-dash .ln-hero h1 .ln-bn { display: block; margin: 6px 0 0; font-size: 15px; }
+  .ln-dash .ln-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ln-panel-head { flex-direction: column; gap: 8px; }
+  .ln-panel-head .ln-unit-prog { width: 100%; }
+  .ln-dash .ln-lessons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ln-how { grid-template-columns: 1fr; }
+  .ln-dash .ln-note { justify-content: flex-start; width: 100%; flex: none; }
+}
+
+/* shorter laptop screens: the mock exam card keeps just its title, button and last result */
+@media (min-width: 1000px) and (max-height: 760px) {
+  .ln-dash .ln-exam > p { display: none; }
+  .ln-dash .ln-hero::after { display: none; }
+}
+@media (min-width: 1000px) and (min-height: 560px) {
+  /* the entrance animation must not flash a scrollbar on the one-screen page */
+  body[data-view="learn"] #app { overflow: hidden; }
+}
+@media (min-width: 1000px) and (max-height: 760px) {
+  .ln-dash .ln-lesson { padding: 8px 12px; gap: 2px; }
+  .ln-dash .ln-l-bn { font-size: 17px; }
+  .ln-panel-head p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ln-tab { padding: 6px 4px 8px; }
+}
+
+/* phones and tablets: every part of the course page stays within the screen */
+@media (max-width: 999px), (max-height: 559px) {
+  .ln-dash > *, .ln-side > *, .ln-hero > * { min-width: 0; }
+  .ln-dash .ln-eyebrow { gap: 6px; }
+  .ln-how-btn { margin-left: 0; }
+}

@@ -31,17 +31,17 @@ export interface CourseLesson {
   goal: number;       // wpm for two stars
 }
 
-export interface Unit { n: number; title: string; bn: string; summary: string; icon: IconName }
+export interface Unit { n: number; title: string; short: string; bn: string; summary: string; icon: IconName }
 
 export const UNITS: Unit[] = [
-  { n: 1, title: 'Home row', bn: 'মাঝের সারি', summary: 'Where your fingers rest. ক ত দ ব and the vowel signs া ি ু ৃ.', icon: 'keyboard' },
-  { n: 2, title: 'Home row with Shift', bn: 'শিফট', summary: 'Shift gives each key a second letter: খ থ ধ ভ অ ী ূ ।', icon: 'shield' },
-  { n: 3, title: 'Top row', bn: 'উপরের সারি', summary: 'Reach up for ঙ য ড প ট চ জ হ গ ড়.', icon: 'trend' },
-  { n: 4, title: 'Top row with Shift', bn: 'উপরের সারি · শিফট', summary: 'ং য় ঢ ফ ঠ ছ ঝ ঞ ঘ ঢ়.', icon: 'zap' },
-  { n: 5, title: 'Bottom row', bn: 'নিচের সারি', summary: 'র ন স ম, the vowel sign ে, ও and the Shift letters ল ণ ষ শ ৈ ৌ.', icon: 'words' },
-  { n: 6, title: 'Bijoy essentials', bn: 'বিজয়ের নিয়ম', summary: 'Independent vowels, যুক্তাক্ষর, ফলা, reph and ং ঃ ঁ ৎ: what makes Bijoy Bijoy.', icon: 'lessons' },
-  { n: 7, title: 'Numbers', bn: 'সংখ্যা', summary: 'Bangla digits ০ to ৯ on the number row.', icon: 'hash' },
-  { n: 8, title: 'Real typing', bn: 'আসল টাইপিং', summary: 'Common words, sentences, speed and an exam-style test.', icon: 'exam' },
+  { n: 1, title: 'Home row', short: 'Home', bn: 'মাঝের সারি', summary: 'Where your fingers rest. ক ত দ ব and the vowel signs া ি ু ৃ.', icon: 'keyboard' },
+  { n: 2, title: 'Home row with Shift', short: 'Home ⇧', bn: 'শিফট', summary: 'Shift gives each key a second letter: খ থ ধ ভ অ ী ূ ।', icon: 'shield' },
+  { n: 3, title: 'Top row', short: 'Top', bn: 'উপরের সারি', summary: 'Reach up for ঙ য ড প ট চ জ হ গ ড়.', icon: 'trend' },
+  { n: 4, title: 'Top row with Shift', short: 'Top ⇧', bn: 'উপরের সারি · শিফট', summary: 'ং য় ঢ ফ ঠ ছ ঝ ঞ ঘ ঢ়.', icon: 'zap' },
+  { n: 5, title: 'Bottom row', short: 'Bottom', bn: 'নিচের সারি', summary: 'র ন স ম, the vowel sign ে, ও and the Shift letters ল ণ ষ শ ৈ ৌ.', icon: 'words' },
+  { n: 6, title: 'Bijoy essentials', short: 'Bijoy rules', bn: 'বিজয়ের নিয়ম', summary: 'Independent vowels, যুক্তাক্ষর, ফলা, reph and ং ঃ ঁ ৎ: what makes Bijoy Bijoy.', icon: 'lessons' },
+  { n: 7, title: 'Numbers', short: 'Numbers', bn: 'সংখ্যা', summary: 'Bangla digits ০ to ৯ on the number row.', icon: 'hash' },
+  { n: 8, title: 'Real typing', short: 'Real typing', bn: 'আসল টাইপিং', summary: 'Common words, sentences, speed and an exam-style test.', icon: 'exam' },
 ];
 
 const HOME_START = 'jf', HOME_R = 'kl', HOME_L = 'dsa', HOME_B = 'h';
