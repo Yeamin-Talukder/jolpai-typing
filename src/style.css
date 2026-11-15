@@ -1594,3 +1594,95 @@ kbd { white-space: nowrap; }
 
 /* the typing-test shortcuts only make sense on the typing test */
 body[data-view]:not([data-view="test"]) .bottom .keys { display: none; }
+
+/* =====================================================================
+   Lessons and the mock exam fit one screen: focus mode hides the site
+   header, footer and corner buttons; the lesson is a column of
+   [bar] [content, centred] [keyboard + hands], sized by the screen height.
+   ===================================================================== */
+body.focus .top, body.focus .bottom, body.focus .corner { display: none; }
+body.focus #app { min-height: 100dvh; padding-top: clamp(8px, 1.6dvh, 18px); padding-bottom: clamp(8px, 1.6dvh, 18px); grid-template-rows: 1fr; gap: 0; }
+body.focus main { padding-top: 0; justify-content: flex-start; }
+body.focus .learn { max-width: 1280px; }
+
+/* key size follows the screen: big screens get full-size keys, laptops smaller ones */
+.lp { --kh: clamp(26px, min(6.4dvh, calc((100vw - 140px) / 16)), 54px); }
+.lp.no-guide { --kh: clamp(24px, min(4.8dvh, calc((100vw - 140px) / 16)), 46px); } /* explanations need the room */
+
+.learn.playing .lp {
+  height: calc(100dvh - 2 * clamp(8px, 1.6dvh, 18px));
+  min-height: 480px;
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(6px, 1.4dvh, 14px);
+}
+.learn.playing .lp > .lp-input { position: absolute; }
+
+/* one bar: back, title, steps, live numbers */
+.lp-top { flex-wrap: nowrap; }
+.lp-title { flex: 0 1 auto; }
+.lp-top .lp-pills { flex: 1; justify-content: center; flex-wrap: nowrap; }
+.lp-live { flex: none; }
+
+/* the content sits in the middle and scrolls on its own if it ever needs to */
+.lp-body { min-height: 0; overflow-y: auto; overflow-x: hidden; align-items: center; padding: 2px 4px; scrollbar-width: thin; }
+.lp-body > * { margin: auto 0; }
+
+/* compact cards */
+.lp-card { padding: clamp(16px, 2.6dvh, 28px) clamp(18px, 2.4vw, 32px); gap: clamp(8px, 1.4dvh, 14px); }
+.lp-card h2 { font-size: clamp(20px, 3dvh, 26px); }
+.lp-card p { font-size: clamp(14.5px, 2dvh, 16.5px); line-height: 1.6; }
+.demo { padding: clamp(12px, 2dvh, 22px); }
+.demo-key { height: clamp(46px, 6.4dvh, 60px); }
+.demo-out { min-height: clamp(48px, 7dvh, 64px); font-size: clamp(28px, 4.4dvh, 40px); }
+.lp-meet { padding: clamp(16px, 2.6dvh, 26px) clamp(18px, 2.4vw, 32px); gap: clamp(20px, 3vw, 36px); }
+.lp-meet-cap { width: clamp(92px, 15dvh, 150px); height: clamp(92px, 15dvh, 150px); border-radius: clamp(18px, 3dvh, 28px); }
+.lp-meet-bn { font-size: clamp(38px, 6.6dvh, 62px); }
+.lp-meet-key { font-size: clamp(14px, 2dvh, 18px); }
+.lp-meet-text h2 { font-size: clamp(20px, 3dvh, 26px); }
+.lp-meet-text p { font-size: clamp(14.5px, 2dvh, 16px); }
+.lp-meet-dots { margin-top: clamp(8px, 1.6dvh, 18px); }
+.lp-type { gap: clamp(6px, 1.2dvh, 14px); }
+.lp-line { font-size: clamp(30px, 5dvh, 46px); }
+.lp-strip { min-height: 0; }
+.sk { height: clamp(40px, 6dvh, 54px); }
+.lp-result { padding: clamp(18px, 3dvh, 34px) 32px clamp(16px, 2.6dvh, 28px); }
+.lp-stars .star { width: clamp(44px, 7dvh, 64px); height: clamp(44px, 7dvh, 64px); }
+.lp-stars .star:nth-child(2) { width: clamp(56px, 9dvh, 82px); height: clamp(56px, 9dvh, 82px); }
+.lp-result h2 { margin-top: clamp(8px, 1.6dvh, 16px); font-size: clamp(22px, 3.4dvh, 30px); }
+.lp-result-stats { margin: clamp(12px, 2.2dvh, 22px) 0 6px; }
+.lp-result-stats b { font-size: clamp(24px, 4dvh, 34px); }
+
+/* the guide: keyboard and hands side by side in height */
+.lp-guide { gap: calc(var(--kh) * .16); }
+.lp.no-guide .lp-hands { display: none; }     /* explanations: the keyboard still shows the demo keys */
+.lp.done .lp-guide { display: none; }         /* results need the room */
+.lp-hands { width: auto; height: calc(var(--kh) * 2.1); }
+.lp-hands .hands { width: auto; height: 100%; }
+@media (min-width: 901px) {
+  .lp-kb, .lp-kb .kb-row { gap: calc(var(--kh) * .11); }
+  .lp-kb .kb-key { width: var(--kh); height: var(--kh); border-radius: calc(var(--kh) * .17); font-size: calc(var(--kh) * .36); }
+  .lp-kb .kb-key .hi { font-size: calc(var(--kh) * .26); }
+  .lp-kb .kb-key .en { font-size: calc(var(--kh) * .2); left: calc(var(--kh) * .08); bottom: calc(var(--kh) * .04); }
+  .lp-kb .kb-key.wide { min-width: calc(var(--kh) * 1.5); padding: 0 calc(var(--kh) * .2); font-size: calc(var(--kh) * .24); }
+  .lp-kb .kb-key.space { width: calc(var(--kh) * 6.5); }
+  .lp-kb .kb-key.home::after { bottom: calc(var(--kh) * .1); }
+}
+
+/* the mock exam: bar, passage, answer */
+.learn.playing .ex-run {
+  height: calc(100dvh - 2 * clamp(8px, 1.6dvh, 18px)); min-height: 460px;
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: clamp(8px, 1.6dvh, 16px);
+}
+.learn.playing .ex-run .ex-paper { max-height: none; min-height: 0; }
+.learn.playing .ex-run .ex-answer { min-height: clamp(120px, 26dvh, 240px); max-height: 34dvh; }
+
+@media (max-width: 1100px) {
+  .lp-top { flex-wrap: wrap; }
+  .lp-title { flex: 1 1 auto; }
+  .lp-top .lp-pills { order: 3; flex: 1 1 100%; }
+}
+@media (max-width: 700px) {
+  .learn.playing .lp { min-height: 0; }
+  .lp-hands { height: calc(var(--kh) * 2.6); }
+  .lp-live { width: auto; }
+}

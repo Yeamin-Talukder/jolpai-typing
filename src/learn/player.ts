@@ -101,9 +101,9 @@ export class LessonPlayer {
             <span class="lp-eyebrow">${unit ? `unit ${unit.n} · ${esc(unit.title)}` : 'practice'}${n > 0 ? ` · lesson ${n} of ${LESSONS.length}` : ''}</span>
             <b>${esc(l.title)} <span class="bn">${esc(l.bn)}</span></b>
           </div>
+          <nav class="lp-pills" aria-label="Lesson steps">${pills}</nav>
           <div class="lp-live" aria-live="off"><span data-live="acc"><b>100%</b> acc</span><span data-live="wpm"><b>0</b> wpm</span><span data-live="time" hidden><b>0</b> s</span></div>
         </header>
-        <nav class="lp-pills" aria-label="Lesson steps">${pills}</nav>
         <div class="lp-body"></div>
         <div class="lp-guide">
           <div class="keyboard lp-kb zones" aria-hidden="true"></div>
@@ -464,7 +464,7 @@ export class LessonPlayer {
     this.done = true;
     this.guide(null);
     this.setPill('result');
-    this.root.querySelector('.lp')!.classList.add('no-guide');
+    this.root.querySelector('.lp')!.classList.add('no-guide', 'done');
     const l = this.o.lesson;
     const acc = this.acc(), wpm = this.wpm();
     // read progress fresh: the account may have updated it during the lesson

@@ -32,6 +32,7 @@ export class Learn {
   }
 
   private stop() {
+    document.body.classList.remove('focus');
     this.player?.destroy();
     this.exam?.destroy();
     this.player = null;
@@ -65,6 +66,7 @@ export class Learn {
   start(l: CourseLesson) {
     this.stop();
     this.el.classList.add('playing');
+    document.body.classList.add('focus'); // the lesson fills the screen
     window.scrollTo({ top: 0 });
     this.player = new LessonPlayer(this.el, {
       lesson: l, prefs: this.h.prefs,
@@ -78,6 +80,7 @@ export class Learn {
   startExam() {
     this.stop();
     this.el.classList.add('playing');
+    document.body.classList.add('focus');
     window.scrollTo({ top: 0 });
     this.exam = new MockExam(this.el, {
       prefs: this.h.prefs, setup: loadSetup(),
