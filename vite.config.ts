@@ -6,6 +6,6 @@ export default defineConfig({
   base: './',
   test: {
     // security rules tests need the Firestore emulator: npm run test:rules
-    exclude: ['**/node_modules/**', 'rules-tests/**'],
+    exclude: ['**/node_modules/**', 'rules-tests/**', '.claude/**'],
   },
 });
