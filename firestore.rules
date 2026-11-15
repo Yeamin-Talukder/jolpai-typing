@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// Jolpai Type: each signed-in person can read and write only their own
+// profile and results. Nobody else can read them.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isNum(v, lo, hi) {
+      return (v is int || v is float) && v >= lo && v <= hi;
+    }
+
+    function validResult(d, id) {
+      return d.keys().hasOnly(['id', 't', 'lang', 'mode', 'amount', 'label', 'wpm', 'net', 'raw', 'acc', 'sec'])
+        && d.keys().hasAll(['id', 't', 'lang', 'mode', 'amount', 'label', 'wpm', 'net', 'raw', 'acc', 'sec'])
+        && d.id == id
+        && d.t is int
+        && d.lang in ['english', 'bangla']
+        && d.mode in ['time', 'words', 'passage', 'lesson']
+        && isNum(d.amount, 0, 600)
+        && d.label is string && d.label.size() <= 40
+        && isNum(d.wpm, 0, 1000) && isNum(d.net, 0, 1000) && isNum(d.raw, 0, 1000)
+        && isNum(d.acc, 0, 100)
+        && isNum(d.sec, 0, 3600);
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['name', 'lastSeen'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 100;
+      allow delete: if isOwner(uid);
+
+      match /results/{resultId} {
+        allow read, delete: if isOwner(uid);
+        // results are written once and never edited
+        allow create: if isOwner(uid) && validResult(request.resource.data, resultId);
+        allow update: if false;
+      }
+    }
+  }
+}

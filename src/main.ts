@@ -5,7 +5,8 @@ import { BANGLA_WORDS } from './words-bn';
 import { bijoyToUnicode, unicodeToSegments, usKey } from './bijoy';
 import { Keyboard } from './keyboard';
 import { lessonItems, lessonsFor } from './lessons';
-import { addEntry, clearHistory, renderHistory } from './history';
+import { addEntry, clearHistory, newId, renderHistory, type Entry } from './history';
+import { accountsEnabled, clearAccountHistory, currentUser, initAccount, saveToAccount, signIn, signOut, type AccountUser } from './account';
 import { renderThemePicker } from './themes';
 
 type Mode = 'time' | 'words' | 'passage' | 'lesson';
@@ -231,7 +232,7 @@ function wordHTML(i: number): string {
 }
 
 function esc(s: string) {
-  return s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
+  return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 }
 
 function renderAllWords() {
@@ -496,10 +497,12 @@ function finish() {
   const pb = $('r-pb');
   pb.hidden = true;
   if (sec >= 5 && c.correct > 0) {
-    const { previousBest } = addEntry({
-      t: Date.now(), lang: settings.lang, mode: settings.mode, amount: settings.amount, label: testLabel(),
+    const entry: Entry = {
+      id: newId(), t: Date.now(), lang: settings.lang, mode: settings.mode, amount: settings.amount, label: testLabel(),
       wpm: round1(wpm), net: round1(net), raw: round1(raw), acc: round1(acc), sec: round1(sec),
-    });
+    };
+    const { previousBest } = addEntry(entry);
+    saveToAccount(entry);
     if (previousBest !== null && Math.round(wpm) > Math.round(previousBest)) {
       pb.textContent = `new personal best · was ${Math.round(previousBest)}`;
       pb.hidden = false;
@@ -600,6 +603,11 @@ function drawChart() {
 const historyEl = $('history');
 let historyLang: 'english' | 'bangla' = settings.lang;
 
+function drawHistory() {
+  const u = currentUser();
+  renderHistory(historyEl, historyLang, u ? u.email || u.name : null);
+}
+
 function showHistory(open: boolean) {
   historyEl.hidden = !open;
   configEl.hidden = open;
@@ -609,7 +617,7 @@ function showHistory(open: boolean) {
     testEl.hidden = true;
     resultEl.hidden = true;
     historyLang = settings.lang;
-    renderHistory(historyEl, historyLang);
+    drawHistory();
   } else {
     reset();
   }
@@ -622,10 +630,13 @@ historyEl.addEventListener('click', e => {
   if (!b) return;
   if (b.dataset.hlang) {
     historyLang = b.dataset.hlang as 'english' | 'bangla';
-    renderHistory(historyEl, historyLang);
-  } else if (b.id === 'h-clear' && confirm('Delete all saved test results from this browser? This cannot be undone.')) {
+    drawHistory();
+  } else if (b.id === 'h-clear') {
+    const where = currentUser() ? 'from your account and this browser' : 'from this browser';
+    if (!confirm(`Delete all saved test results ${where}? This cannot be undone.`)) return;
     clearHistory();
-    renderHistory(historyEl, historyLang);
+    drawHistory();
+    clearAccountHistory().catch(err => alert(`Could not delete the results in your account: ${err.message || err}`));
   }
 });
 
@@ -633,8 +644,58 @@ $('restart').addEventListener('click', reset);
 $('next').addEventListener('click', reset);
 window.addEventListener('resize', () => { if (!finished) updateCaret(); else drawChart(); });
 
+// ---------- account ----------
+const accountEl = $('account');
+
+function renderAccount(u: AccountUser | null) {
+  if (!accountsEnabled()) { accountEl.hidden = true; return; }
+  accountEl.hidden = false;
+  if (!u) {
+    accountEl.innerHTML = `<button id="sign-in" class="sign-in" title="Sign in to save your progress on every device">sign in</button>`;
+    return;
+  }
+  const initial = esc((u.name || u.email || '?').trim().charAt(0).toUpperCase());
+  const avatar = u.photo
+    ? `<img src="${esc(u.photo)}" alt="" referrerpolicy="no-referrer" />`
+    : `<span>${initial}</span>`;
+  accountEl.innerHTML = `
+    <button id="account-btn" class="avatar" aria-haspopup="true" aria-expanded="false" title="${esc(u.name)}">${avatar}</button>
+    <div id="account-menu" class="account-menu" hidden>
+      <div class="am-name">${esc(u.name)}</div>
+      <div class="am-email">${esc(u.email)}</div>
+      <p class="am-note">Your results are saved to your account.</p>
+      <button id="sign-out" class="am-out">sign out</button>
+    </div>`;
+}
+
+accountEl.addEventListener('click', async e => {
+  const b = (e.target as HTMLElement).closest('button');
+  if (!b) return;
+  const menu = $('account-menu') as HTMLElement | null;
+  if (b.id === 'sign-in') {
+    b.textContent = 'signing in…';
+    try { await signIn(); } catch (err) { alert(`Sign-in failed: ${(err as Error).message}`); }
+    renderAccount(currentUser());
+  } else if (b.id === 'account-btn' && menu) {
+    menu.hidden = !menu.hidden;
+    b.setAttribute('aria-expanded', String(!menu.hidden));
+  } else if (b.id === 'sign-out') {
+    await signOut();
+  }
+});
+document.addEventListener('click', e => {
+  const menu = document.getElementById('account-menu');
+  if (menu && !menu.hidden && !accountEl.contains(e.target as Node)) menu.hidden = true;
+});
+
+renderAccount(null);
+initAccount(u => {
+  renderAccount(u);
+  if (!historyEl.hidden) drawHistory();
+}).catch(err => console.warn('Accounts are unavailable', err));
+
 renderThemePicker($('themes'), () => {
-  if (!historyEl.hidden) renderHistory(historyEl, historyLang);
+  if (!historyEl.hidden) drawHistory();
   focusInput();
 });
 renderConfig();

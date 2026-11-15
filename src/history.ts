@@ -1,9 +1,11 @@
-// Test history, kept in this browser's local storage.
-// Nothing leaves the device.
+// Test history. It is always kept in this browser's local storage; when
+// someone is signed in, account.ts also keeps a copy in their account and
+// merges the two.
 
 export type Lang = 'english' | 'bangla';
 
 export interface Entry {
+  id: string;         // unique, so local and account copies can be merged
   t: number;          // finished at (ms since epoch)
   lang: Lang;
   mode: string;       // time | words | passage | lesson
@@ -19,13 +21,25 @@ export interface Entry {
 const KEY = 'jolpai-type:history';
 const MAX = 1000;
 
+export const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
 export function loadHistory(): Entry[] {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || '[]');
-    return Array.isArray(v) ? v : [];
+    if (!Array.isArray(v)) return [];
+    // results saved before ids existed get one now
+    let changed = false;
+    for (const e of v) if (!e.id) { e.id = `${e.t.toString(36)}-${Math.random().toString(36).slice(2, 8)}`; changed = true; }
+    if (changed) save(v);
+    return v;
   } catch {
     return [];
   }
+}
+
+/** Replace the whole local list (used after merging with the account). */
+export function replaceHistory(list: Entry[]) {
+  save([...list].sort((a, b) => a.t - b.t));
 }
 
 function save(list: Entry[]) {
@@ -86,7 +100,7 @@ function progressChart(list: Entry[]): string {
     <div class="h-legend"><span><i class="dot-key"></i>each test</span><span><i class="line-key"></i>average of last 10</span></div>`;
 }
 
-export function renderHistory(el: HTMLElement, lang: Lang) {
+export function renderHistory(el: HTMLElement, lang: Lang, signedInAs: string | null = null) {
   const all = loadHistory();
   const list = all.filter(e => e.lang === lang);
   const best = (pred: (e: Entry) => boolean) => list.filter(pred).reduce((m, e) => Math.max(m, e.wpm), 0);
@@ -133,7 +147,7 @@ export function renderHistory(el: HTMLElement, lang: Lang) {
       <tbody>${rows}</tbody>
     </table></div>`}
     <div class="h-foot">
-      <span>Saved only in this browser.</span>
+      <span>${signedInAs ? `Saved to your account (${esc(signedInAs)}), on every device you sign in on.` : 'Saved only in this browser. Sign in to keep your history on every device.'}</span>
       ${all.length ? '<button id="h-clear" class="h-clear">clear all history</button>' : ''}
     </div>`;
 }

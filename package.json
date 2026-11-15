@@ -7,12 +7,18 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-jolpai-type \"vitest run --config vitest.rules.config.ts\"",
+    "dev:emulators": "firebase emulators:exec --only auth,firestore --project demo-jolpai-type \"vite --port 5800 --strictPort --mode emulators\""
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
     "happy-dom": "^15.11.7",
     "typescript": "~5.6.3",
     "vite": "^5.4.11",
     "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "firebase": "^13.1.0"
   }
 }
