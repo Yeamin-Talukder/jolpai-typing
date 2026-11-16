@@ -83,6 +83,9 @@ export class MockExam {
     this.timers.forEach(t => clearTimeout(t));
   }
 
+  /** Leaving now would throw away an attempt that has started. */
+  get inProgress() { return this.running && !this.ended && !!this.started; }
+
   /** Esc: leave (asking first during an exam). */
   private leave() {
     if (this.running && !this.ended && this.started && !confirm('Leave the exam? This attempt will not be saved.')) return;

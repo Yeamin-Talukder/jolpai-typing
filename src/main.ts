@@ -18,6 +18,8 @@ import { askAmount, askText, customAmount, customText, setCustomAmount, typeable
 import { accountsEnabled, clearAccountHistory, countLesson, countTest, currentShareId, currentUser, initAccount, loadShared, onLearnChange, resetLearnEverywhere, saveLearnToAccount, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
 import { SharePanel } from './share';
 import { renderAbout } from './about';
+import { BASE, isPlainClick, pathFor, routeFromPath, type Page, type Route } from './router';
+import { LESSONS } from './learn/course';
 import { Learn } from './learn';
 import { renderProgressChart } from './progress-chart';
 import { THEMES, applyTheme, currentTheme, renderThemePicker } from './themes';
@@ -911,13 +913,65 @@ function toggleResult(id: string) {
 /** The page's own title from index.html, put back after a shared profile. */
 const PAGE_TITLE = document.title;
 
+// ---------- addresses (see router.ts) ----------
+// 'push' adds a history entry, 'replace' rewrites the current one, 'none' leaves
+// the address alone (it is already right: back/forward, or opening by address).
+let urlMode: 'push' | 'replace' | 'none' = 'push';
+
+function titleFor(r: Route): string {
+  if (r.page === 'learn' && r.exam) return 'Mock exam · Learn Bijoy · Jolpai Typing';
+  if (r.page === 'learn' && r.lesson) {
+    const l = LESSONS.find(x => x.id === r.lesson);
+    return l ? `${l.title} · Learn Bijoy · Jolpai Typing` : 'Learn Bijoy typing · Jolpai Typing';
+  }
+  return { test: PAGE_TITLE, learn: 'Learn Bijoy typing · Jolpai Typing', profile: 'Your profile · Jolpai Typing',
+    settings: 'Settings · Jolpai Typing', about: 'About · Jolpai Typing' }[r.page];
+}
+
+/** Put the route in the address bar and the tab title. */
+function setUrl(r: Route) {
+  document.title = titleFor(r);
+  if (urlMode === 'none') return;
+  const path = pathFor(r);
+  if (path === location.pathname && !location.search) return;
+  history[urlMode === 'push' ? 'pushState' : 'replaceState'](null, '', path);
+}
+
+/** Show a route, writing the address the given way. */
+function openRoute(r: Route, mode: typeof urlMode) {
+  const before = urlMode;
+  urlMode = mode;
+  try {
+    showView(r.page);
+    if (r.page === 'learn' && (r.lesson || r.exam)) learn.open(r);
+  } finally {
+    urlMode = before;
+  }
+}
+
+/** Where the page was before the last back/forward, to undo it if the visitor stays. */
+let shownPath = location.pathname + location.search;
+document.body.dataset.view = 'test';
+// an exam under way: the browser asks before leaving the site or reloading
+window.addEventListener('beforeunload', e => { if (view === 'learn' && learn.busy()) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('popstate', () => {
+  if (view === 'learn' && learn.busy() && !confirm('Leave the exam? This attempt will not be saved.')) {
+    history.pushState(null, '', shownPath); // stay: put the exam's address back
+    return;
+  }
+  const shared = new URLSearchParams(location.search).get('p');
+  if (shared) { urlMode = 'none'; openShared(shared).finally(() => { urlMode = 'push'; }); }
+  else openRoute(routeFromPath(location.pathname), 'none');
+  shownPath = location.pathname + location.search;
+});
+
 function showView(v: View) {
   // leaving a shared profile: drop ?p= from the address
   if (view === 'shared' && v !== 'shared') {
-    history.replaceState(null, '', location.pathname);
     document.title = PAGE_TITLE;
     sharedData = null;
   }
+  if (v !== 'shared') setUrl({ page: v as Page });
   view = v;
   document.body.dataset.view = v;
   profileEl.hidden = v !== 'profile' && v !== 'shared';
@@ -932,13 +986,14 @@ function showView(v: View) {
   $('nav-test').classList.toggle('active', v === 'test');
   $('nav-history').classList.toggle('active', v === 'profile');
   $('nav-settings').classList.toggle('active', v === 'settings');
-  if (v === 'test') { reset(); return; }
+  if (v === 'test') { shownPath = location.pathname + location.search; reset(); return; }
   clearInterval(tick);
   replay.stop();
   testEl.hidden = true;
   resultEl.hidden = true;
   document.body.classList.remove('typing');
   window.scrollTo({ top: 0 });
+  shownPath = location.pathname + location.search;
   if (v === 'shared') return; // openShared() draws it once loaded
   if (v === 'about') { renderAbout(aboutEl, to => showView(to)); enter(aboutEl); return; }
   if (v === 'learn') { learn.show(); return; }
@@ -959,6 +1014,7 @@ function showView(v: View) {
 /** Show someone's shared profile, from a ?p= link. */
 async function openShared(id: string) {
   showView('shared');
+  document.title = 'Shared profile · Jolpai Typing';
   profileEl.innerHTML = `<div class="h-empty-box">${icon('user', 32)}<p class="h-empty">Loading the profile…</p></div>`;
   let data: SharedData | null = null;
   try { data = await loadShared(id); } catch (err) { console.warn('Could not load the shared profile', err); }
@@ -991,16 +1047,28 @@ const sharePanel = new SharePanel({
   signIn: () => { signIn().catch(err => alert(`Sign-in failed: ${(err as Error).message}`)); },
 }, () => { if (view === 'profile') drawProfile(); });
 
-$('nav-history').addEventListener('click', () => showView(view === 'profile' ? 'test' : 'profile'));
-$('nav-settings').addEventListener('click', () => showView(view === 'settings' ? 'test' : 'settings'));
-$('nav-about').addEventListener('click', () => showView(view === 'about' ? 'test' : 'about'));
-$('nav-learn').addEventListener('click', () => showView('learn'));
+/** A nav link: real address for new tabs, handled in the page on a plain click. */
+function navLink(id: string, r: Route, click: () => void) {
+  const el = $(id);
+  if (el instanceof HTMLAnchorElement) el.href = pathFor(r);
+  el.addEventListener('click', e => {
+    if (el instanceof HTMLAnchorElement && !isPlainClick(e)) return;
+    e.preventDefault();
+    click();
+  });
+}
+navLink('nav-history', { page: 'profile' }, () => showView(view === 'profile' ? 'test' : 'profile'));
+navLink('nav-settings', { page: 'settings' }, () => showView(view === 'settings' ? 'test' : 'settings'));
+navLink('nav-about', { page: 'about' }, () => showView(view === 'about' ? 'test' : 'about'));
+navLink('nav-learn', { page: 'learn' }, () => showView('learn'));
+navLink('brand', { page: 'test' }, () => showView('test'));
 const learn = new Learn(learnEl, {
   prefs,
   onLeave: () => showView('test'),
   signedIn: () => !!currentUser(),
   onProgress: p => { saveLearnToAccount(p); if (p.run) countLesson(p.run.secs); },
   onReset: () => resetLearnEverywhere(),
+  onRoute: sub => { if (view === 'learn') { setUrl({ page: 'learn', ...sub }); shownPath = location.pathname; } },
   onExamDone: (rec, s, setup) => {
     // a mock exam is a passage test too: it joins the history and the profile
     const entry: Entry = {
@@ -1014,7 +1082,7 @@ const learn = new Learn(learnEl, {
   },
 });
 onLearnChange(() => learn.refresh());
-$('nav-test').addEventListener('click', () => showView('test'));
+navLink('nav-test', { page: 'test' }, () => showView('test'));
 $('nav-test').classList.add('active');
 profileEl.addEventListener('keydown', e => {
   const row = (e.target as HTMLElement).closest<HTMLElement>('.h-row');
@@ -1243,7 +1311,13 @@ reset();
 const sharedParam = linkParams.get('p');
 if (sharedParam) openShared(sharedParam);
 else {
-  if (linkParams.get('view') === 'learn') showView('learn');
-  // one clean address for the page, whichever link brought you here
-  if (linkLang || linkParams.has('view')) history.replaceState(null, '', location.pathname);
+  // the address decides the page; old ?view=learn links become /learn/
+  const start = linkParams.get('view') === 'learn' ? { page: 'learn' as const } : routeFromPath(location.pathname);
+  if (start.page !== 'test') openRoute(start, 'replace');
+  else {
+    document.title = PAGE_TITLE;
+    // one clean address, whichever link or old path brought you here
+    if (linkLang || linkParams.has('view') || location.pathname !== BASE) history.replaceState(null, '', BASE);
+  }
+  shownPath = location.pathname + location.search;
 }

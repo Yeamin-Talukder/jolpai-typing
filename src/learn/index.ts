@@ -1,12 +1,12 @@
 // The Learn section: the course page, with the lesson player and the mock
 // exam on top of it.
 import type { Prefs } from '../prefs';
-import type { CourseLesson } from './course';
+import { LESSONS, type CourseLesson } from './course';
 import type { ExamScore } from './exam-score';
 import { loadSetup, MockExam, type ExamSetup } from './exam';
 import { renderLearnPage } from './page';
 import { LessonPlayer } from './player';
-import { applyExam, loadLearn, saveLearn, type ExamRec, type LearnData, type Pending } from './progress';
+import { applyExam, isUnlocked, loadLearn, saveLearn, type ExamRec, type LearnData, type Pending } from './progress';
 
 export interface LearnHooks {
   prefs: Prefs;
@@ -18,6 +18,8 @@ export interface LearnHooks {
   onReset(): Promise<void>;
   /** A mock exam finished: add it to the test history. */
   onExamDone(rec: ExamRec, score: ExamScore, setup: ExamSetup): void;
+  /** The course page, a lesson or the exam is now showing: keep the address in step. */
+  onRoute(sub: { lesson?: string; exam?: boolean }): void;
 }
 
 /** Everything the course page shows (not the queue of unsaved runs). */
@@ -63,7 +65,20 @@ export class Learn {
       reset: () => { this.h.onReset().catch(err => alert(`Could not reset the course in your account: ${(err as Error).message}`)).finally(() => this.show()); },
     });
     if (!quiet) this.enter();
+    if (!quiet) this.h.onRoute({});
   }
+
+  /** Open what an address asks for: a lesson by id, the exam, or the course page. */
+  open(sub: { lesson?: string; exam?: boolean }) {
+    const i = sub.lesson ? LESSONS.findIndex(x => x.id === sub.lesson) : -1;
+    // a locked lesson (or an unknown one) shows the course page instead
+    if (i >= 0 && isUnlocked(loadLearn(), i)) this.start(LESSONS[i]);
+    else if (sub.exam) this.startExam();
+    else this.show();
+  }
+
+  /** A mock exam is under way, so leaving would lose it. */
+  busy() { return !!this.exam?.inProgress; }
 
   /** Redraw the course page after the account changed it (not during a lesson or exam). */
   refresh() {
@@ -85,6 +100,7 @@ export class Learn {
       onRecorded: p => this.h.onProgress(p),
     });
     this.enter();
+    this.h.onRoute({ lesson: l.id });
   }
 
   startExam() {
@@ -103,6 +119,7 @@ export class Learn {
         this.h.onExamDone(rec, score, setup);
       },
     });
+    this.h.onRoute({ exam: true });
   }
 
   /** Esc on the course page leaves the Learn section. */

@@ -1,4 +1,5 @@
 // The "share profile" panel: link, QR code, share, download and stop sharing.
+import { BASE } from './router';
 import { icon, LOGO_PATHS } from './icons';
 
 export interface ShareActions {
@@ -13,7 +14,7 @@ export interface ShareActions {
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
 /** The link that opens a shared profile. */
-export const shareLink = (id: string) => `${location.origin}${location.pathname}?p=${encodeURIComponent(id)}`;
+export const shareLink = (id: string) => `${location.origin}${BASE}?p=${encodeURIComponent(id)}`;
 
 // the logo in the middle of the QR code: the keyboard mark in the jolpai colours
 const LOGO_GREEN = '#7f9a2c', LEAF_GREEN = '#4d5a35';

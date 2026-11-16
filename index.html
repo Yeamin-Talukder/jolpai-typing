@@ -108,18 +108,18 @@
   <body>
     <div id="app">
       <header class="top">
-        <a class="brand" href="./" aria-label="Jolpai Typing home">
+        <a id="brand" class="brand" href="./" aria-label="Jolpai Typing home">
           <svg class="logo" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path class="lg-board" fill-rule="evenodd" d="M7.2 9H24.8A5.2 5.2 0 0 1 30 14.2V23.8A5.2 5.2 0 0 1 24.8 29H7.2A5.2 5.2 0 0 1 2 23.8V14.2A5.2 5.2 0 0 1 7.2 9ZM6.2 12.6H7.4A1 1 0 0 1 8.4 13.6V14.8A1 1 0 0 1 7.4 15.8H6.2A1 1 0 0 1 5.2 14.8V13.6A1 1 0 0 1 6.2 12.6ZM10.8 12.6H12A1 1 0 0 1 13 13.6V14.8A1 1 0 0 1 12 15.8H10.8A1 1 0 0 1 9.8 14.8V13.6A1 1 0 0 1 10.8 12.6ZM15.4 12.6H16.6A1 1 0 0 1 17.6 13.6V14.8A1 1 0 0 1 16.6 15.8H15.4A1 1 0 0 1 14.4 14.8V13.6A1 1 0 0 1 15.4 12.6ZM20 12.6H21.2A1 1 0 0 1 22.2 13.6V14.8A1 1 0 0 1 21.2 15.8H20A1 1 0 0 1 19 14.8V13.6A1 1 0 0 1 20 12.6ZM24.6 12.6H25.8A1 1 0 0 1 26.8 13.6V14.8A1 1 0 0 1 25.8 15.8H24.6A1 1 0 0 1 23.6 14.8V13.6A1 1 0 0 1 24.6 12.6ZM6.2 17.4H7.4A1 1 0 0 1 8.4 18.4V19.6A1 1 0 0 1 7.4 20.6H6.2A1 1 0 0 1 5.2 19.6V18.4A1 1 0 0 1 6.2 17.4ZM10.8 17.4H12A1 1 0 0 1 13 18.4V19.6A1 1 0 0 1 12 20.6H10.8A1 1 0 0 1 9.8 19.6V18.4A1 1 0 0 1 10.8 17.4ZM20 17.4H21.2A1 1 0 0 1 22.2 18.4V19.6A1 1 0 0 1 21.2 20.6H20A1 1 0 0 1 19 19.6V18.4A1 1 0 0 1 20 17.4ZM24.6 17.4H25.8A1 1 0 0 1 26.8 18.4V19.6A1 1 0 0 1 25.8 20.6H24.6A1 1 0 0 1 23.6 19.6V18.4A1 1 0 0 1 24.6 17.4ZM10.6 22.2H21.4A1 1 0 0 1 22.4 23.2V24.2A1 1 0 0 1 21.4 25.2H10.6A1 1 0 0 1 9.6 24.2V23.2A1 1 0 0 1 10.6 22.2ZM13.6 19A2.4 2.4 0 1 0 18.4 19A2.4 2.4 0 1 0 13.6 19Z"/><g class="lg-taps"><rect class="lg-tap" style="--k:7" x="5.7" y="13.1" width="2.2" height="2.2" rx=".6" opacity="0"/><rect class="lg-tap" style="--k:0" x="10.3" y="13.1" width="2.2" height="2.2" rx=".6" opacity="0"/><rect class="lg-tap" style="--k:9" x="14.9" y="13.1" width="2.2" height="2.2" rx=".6" opacity="0"/><rect class="lg-tap" style="--k:2" x="19.5" y="13.1" width="2.2" height="2.2" rx=".6" opacity="0"/><rect class="lg-tap" style="--k:5" x="24.1" y="13.1" width="2.2" height="2.2" rx=".6" opacity="0"/><rect class="lg-tap" style="--k:4" x="5.7" y="17.9" width="2.2" height="2.2" rx=".6" opacity="0"/><rect class="lg-tap" style="--k:6" x="10.3" y="17.9" width="2.2" height="2.2" rx=".6" opacity="0"/><rect class="lg-tap" style="--k:1" x="19.5" y="17.9" width="2.2" height="2.2" rx=".6" opacity="0"/><rect class="lg-tap" style="--k:8" x="24.1" y="17.9" width="2.2" height="2.2" rx=".6" opacity="0"/><rect class="lg-tap" style="--k:3" x="10.1" y="22.7" width="11.8" height="2" rx=".6" opacity="0"/></g><path class="lg-olive" d="M14.7 19A1.3 1.6 0 1 0 17.3 19A1.3 1.6 0 1 0 14.7 19Z"/><path class="lg-leaf" d="M21.4 9.8C21.2 5 24.6 2 29.6 1.9C29.7 6.7 26.4 9.8 21.4 9.8Z"/></svg>
           <span class="brand-text"><span class="brand-sub">জলপাই</span>jolpai<span class="brand-type">typing</span></span>
         </a>
         <nav class="nav" aria-label="Main">
           <div id="account" class="account" hidden></div>
-          <button id="nav-learn" title="Learn Bijoy touch typing" aria-label="Learn"><i data-icon="lessons" data-size="20"></i><span class="nav-label">learn</span></button>
-          <button id="nav-test" title="Typing test (Esc)" aria-label="Typing test"><i data-icon="keyboard" data-size="20"></i>
-          </button>
-          <button id="nav-history" title="Your profile: personal bests, stats and history" aria-label="Profile"><i data-icon="user" data-size="20"></i>
-          </button>
-          <button id="nav-settings" title="Settings" aria-label="Settings"><i data-icon="gear" data-size="20"></i></button>
+          <a id="nav-learn" href="learn/" title="Learn Bijoy touch typing" aria-label="Learn"><i data-icon="lessons" data-size="20"></i><span class="nav-label">learn</span></a>
+          <a id="nav-test" href="./" title="Typing test (Esc)" aria-label="Typing test"><i data-icon="keyboard" data-size="20"></i>
+          </a>
+          <a id="nav-history" href="profile/" title="Your profile: personal bests, stats and history" aria-label="Profile"><i data-icon="user" data-size="20"></i>
+          </a>
+          <a id="nav-settings" href="settings/" title="Settings" aria-label="Settings"><i data-icon="gear" data-size="20"></i></a>
         </nav>
       </header>
       <main>
@@ -208,7 +208,7 @@
           <li>A step-by-step course to learn Bijoy touch typing, with the finger for every key</li>
           <li>Speed (WPM), accuracy, personal bests and a progress graph</li>
         </ul>
-        <p>Guides: <a href="./bangla-typing-test/">Bangla typing test (বাংলা টাইপিং টেস্ট)</a> · <a href="./bijoy-typing-tutor/">Learn Bijoy typing (বিজয় টাইপিং শিখুন)</a></p>
+        <p>Guides: <a href="https://yeamin-talukder.github.io/jolpai-typing/bangla-typing-test/">Bangla typing test (বাংলা টাইপিং টেস্ট)</a> · <a href="https://yeamin-talukder.github.io/jolpai-typing/bijoy-typing-tutor/">Learn Bijoy typing (বিজয় টাইপিং শিখুন)</a></p>
         <p><strong>Please turn on JavaScript to start typing.</strong> Made by <a href="https://github.com/Yeamin-Talukder" rel="author">Md Yeamin Talukder</a>.</p>
       </div>
     </noscript>

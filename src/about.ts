@@ -5,6 +5,7 @@ import { loadSiteStats, type SiteStats } from './account';
 import { unicodeToSegments } from './bijoy';
 import './about-stats.css';
 import { countUp, icon, logo, type IconName } from './icons';
+import { BASE } from './router';
 import { LESSONS, UNITS } from './learn/course';
 import { THEMES } from './themes';
 
@@ -140,7 +141,7 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
     </div>
 
     <p class="ab-foot" data-reveal>${icon('lessons', 14)}Built with TypeScript, Vite and Firebase · made for Bangla typists</p>
-    <p class="ab-foot ab-guides" data-reveal><a href="./bangla-typing-test/">Bangla typing test guide · বাংলা টাইপিং টেস্ট</a><span>·</span><a href="./bijoy-typing-tutor/">Learn Bijoy typing · বিজয় টাইপিং শিখুন</a></p>`;
+    <p class="ab-foot ab-guides" data-reveal><a href="${BASE}bangla-typing-test/">Bangla typing test guide · বাংলা টাইপিং টেস্ট</a><span>·</span><a href="${BASE}bijoy-typing-tutor/">Learn Bijoy typing · বিজয় টাইপিং শিখুন</a></p>`;
 
   el.onclick = e => {
     const b = (e.target as Element).closest<HTMLElement>('[data-go]');

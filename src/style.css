@@ -104,13 +104,13 @@ body.typing .top:hover { opacity: 1; }
 .brand-sub { position: absolute; top: -14px; left: 0; font-size: 11px; color: var(--sub); font-weight: 400; letter-spacing: 0; }
 
 .nav { display: flex; gap: 4px; align-items: center; }
-.nav > button {
+.nav > :is(button, a) {
   color: var(--sub); width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
   transition: color var(--fast), background var(--fast), transform var(--fast);
 }
-.nav > button:hover { color: var(--text); background: var(--hover); }
-.nav > button:active { transform: scale(.92); }
-.nav > button.active { color: var(--main); }
+.nav > :is(button, a):hover { color: var(--text); background: var(--hover); }
+.nav > :is(button, a):active { transform: scale(.92); }
+.nav > :is(button, a).active { color: var(--main); }
 
 main { display: flex; flex-direction: column; justify-content: center; gap: 32px; }
 
@@ -618,12 +618,12 @@ body.replay-expanded { overflow: hidden; }
 }
 
 /* ---------- your photo as the profile button ---------- */
-.nav > button.has-avatar { padding: 0; border-radius: 50%; overflow: hidden; width: 34px; height: 34px; margin: 0 2px; background: var(--main); color: var(--bg);
+.nav > :is(button, a).has-avatar { padding: 0; border-radius: 50%; overflow: hidden; width: 34px; height: 34px; margin: 0 2px; background: var(--main); color: var(--bg);
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--line); transition: box-shadow var(--fast), transform var(--fast); }
-.nav > button.has-avatar:hover { background: var(--main); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--sub); }
-.nav > button.has-avatar.active { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--main); }
-.nav > button.has-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.nav > button.has-avatar .initial { font-weight: 600; font-size: 15px; }
+.nav > :is(button, a).has-avatar:hover { background: var(--main); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--sub); }
+.nav > :is(button, a).has-avatar.active { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--main); }
+.nav > :is(button, a).has-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nav > :is(button, a).has-avatar .initial { font-weight: 600; font-size: 15px; }
 .p-side { display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
 .p-out { padding: 7px 12px; font-size: 13px; }
 .p-out:hover { color: var(--error); }
@@ -747,7 +747,7 @@ body.replay-expanded { overflow: hidden; }
   /* header */
   .top { gap: 8px; }
   .nav { gap: 2px; }
-  .nav > button { width: 40px; height: 40px; }
+  .nav > :is(button, a) { width: 40px; height: 40px; }
   .sign-in { padding: 8px 10px; }
   .account { margin-right: 2px; }
 
@@ -2281,3 +2281,4 @@ body[data-view="learn"] main { padding-top: 0; }
 .ab-guides { flex-wrap: wrap; margin-top: -8px; }
 .ab-guides a { color: var(--sub); text-decoration: none; }
 .ab-guides a:hover { color: var(--main); text-decoration: underline; }
+.nav > a { text-decoration: none; }
