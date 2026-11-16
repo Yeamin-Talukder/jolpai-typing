@@ -12,42 +12,70 @@
 
 [![Stars](https://img.shields.io/github/stars/Yeamin-Talukder/jolpai-typing?style=for-the-badge&logo=github&label=stars&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/stargazers)
 [![Forks](https://img.shields.io/github/forks/Yeamin-Talukder/jolpai-typing?style=for-the-badge&logo=github&label=forks&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/network/members)
-[![Watchers](https://img.shields.io/github/watchers/Yeamin-Talukder/jolpai-typing?style=for-the-badge&logo=github&label=watchers&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/watchers)
 [![Views](https://hits.sh/github.com/Yeamin-Talukder/jolpai-type.svg?style=for-the-badge&label=views&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing)
-
-[![Live site](https://img.shields.io/badge/live-yeamin--talukder.github.io%2Fjolpai--typing-a3b84a?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1e2118)](https://yeamin-talukder.github.io/jolpai-typing/)
-[![Deploy](https://img.shields.io/github/actions/workflow/status/Yeamin-Talukder/jolpai-typing/deploy.yml?branch=main&style=for-the-badge&label=deploy&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/actions/workflows/deploy.yml)
-[![Last commit](https://img.shields.io/github/last-commit/Yeamin-Talukder/jolpai-typing?style=for-the-badge&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/commits/main)
-[![Issues](https://img.shields.io/github/issues/Yeamin-Talukder/jolpai-typing?style=for-the-badge&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/issues)
 [![License: MIT](https://img.shields.io/github/license/Yeamin-Talukder/jolpai-typing?style=for-the-badge&color=a3b84a&labelColor=1e2118)](LICENSE)
-[![Made for Bangla typing](https://img.shields.io/badge/made%20for-Bangla%20typing-a3b84a?style=for-the-badge&labelColor=1e2118)](https://yeamin-talukder.github.io/jolpai-typing/)
 
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)
-![Firebase](https://img.shields.io/badge/Firebase-DD2C00?style=flat-square&logo=firebase&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white)
-![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-222222?style=flat-square&logo=githubpages&logoColor=white)
+[![Live site](https://img.shields.io/badge/live-jolpai--typing-a3b84a?style=flat-square&logo=googlechrome&logoColor=white&labelColor=1e2118)](https://yeamin-talukder.github.io/jolpai-typing/)
+[![Deploy](https://img.shields.io/github/actions/workflow/status/Yeamin-Talukder/jolpai-typing/deploy.yml?branch=main&style=flat-square&label=deploy&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/actions/workflows/deploy.yml)
+[![Last commit](https://img.shields.io/github/last-commit/Yeamin-Talukder/jolpai-typing?style=flat-square&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/commits/main)
+[![Watchers](https://img.shields.io/github/watchers/Yeamin-Talukder/jolpai-typing?style=flat-square&label=watchers&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/watchers)
+[![Issues](https://img.shields.io/github/issues/Yeamin-Talukder/jolpai-typing?style=flat-square&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/issues)
 
-**[Open Jolpai Typing](https://yeamin-talukder.github.io/jolpai-typing/)** · [Report a bug](https://github.com/Yeamin-Talukder/jolpai-typing/issues/new) · [Suggest a feature](https://github.com/Yeamin-Talukder/jolpai-typing/issues/new)
+### [Open Jolpai Typing →](https://yeamin-talukder.github.io/jolpai-typing/)
+
+[Report a bug](https://github.com/Yeamin-Talukder/jolpai-typing/issues/new) · [Suggest a feature](https://github.com/Yeamin-Talukder/jolpai-typing/issues/new) · [Give it a star](https://github.com/Yeamin-Talukder/jolpai-typing/stargazers)
+
+<sub>Formerly <b>Jolpai Type</b>. Old links still work.</sub>
+
+<br />
+<br />
+
+<img src=".github/assets/screenshot-bangla.png" alt="Typing Bangla with the Bijoy layout in Jolpai Typing, with the on-screen keyboard lighting the next key" width="100%" />
 
 </div>
 
 ---
 
+## Contents
+
+- [Why Jolpai Typing](#why-jolpai-typing)
+- [Screenshots](#screenshots)
+- [বাংলায় জলপাই টাইপিং](#বাংলায়-জলপাই-টাইপিং)
+- [Features](#features)
+- [How Bijoy typing works here](#how-bijoy-typing-works-here)
+- [Run it locally](#run-it-locally)
+- [Tech stack](#tech-stack) · [Project structure](#project-structure)
+- [FAQ](#faq)
+- [Contributing](#contributing) · [Support the project](#support-the-project) · [License](#license)
+
 ## Why Jolpai Typing
 
 Jolpai Typing is a free online **Bangla typing test** and **Bijoy typing tutor** that runs in your browser. Practise Bangla (Bengali) typing on the Bijoy keyboard layout, take English typing tests, and learn Bijoy touch typing from the very first key.
 
-There was no good place to practise **Bangla typing**. English has polished, modern typing sites, but people who type Bangla were left with old, cluttered pages that are hard to enjoy.
+There was no good place to practise **Bangla typing**. English has polished, modern typing sites, but people who type Bangla were left with old, cluttered pages that are hard to enjoy. Jolpai Typing gives Bangla typing a good environment: a clean, calm, distraction-free typing test with a careful design, and a course that teaches **Bijoy** touch typing step by step. English is here too.
 
-**Jolpai Typing (জলপাই টাইপিং)** gives Bangla typing a good environment: a clean, calm, distraction-free typing test with a careful design, and a course that teaches **Bijoy** touch typing step by step. English is here too.
+| | |
+| --- | --- |
+| **No software to install** | Press the Bijoy keys on any keyboard and the site turns them into Bangla as you type. |
+| **Learn from zero** | 23 lessons take you from the home row to যুক্তাক্ষর, ফলা and reph, with the finger for every key. |
+| **See yourself improve** | Every test is saved with its speed graph, and your profile shows bests, a progress graph and an activity calendar. |
+| **Free and open source** | No sign-up needed. Sign in with Google only if you want your progress on every device. |
 
-- **No software to install.** Press the Bijoy keys on any keyboard and the site turns them into Bangla as you type.
-- **Free and open source.** No sign-up needed. Sign in with Google only if you want your progress on every device.
+## Screenshots
 
-<div align="center">
-  <img src=".github/assets/screenshot-test.png" alt="Jolpai Typing online typing test for Bangla (Bijoy) and English" width="92%" />
-</div>
+<table>
+  <tr>
+    <td width="50%"><img src=".github/assets/screenshot-result.png" alt="Result of a typing test: speed, accuracy and a speed graph" /><br /><sub><b>Results</b>: speed, accuracy, consistency and a speed graph for every test</sub></td>
+    <td width="50%"><img src=".github/assets/screenshot-learn.png" alt="The Bijoy touch-typing course page with units, lessons, mock exam and key mastery" /><br /><sub><b>Learn Bijoy</b>: 8 units, 23 lessons, a mock exam and key mastery</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src=".github/assets/screenshot-lesson.png" alt="A lesson showing the next key and the finger to use on the keyboard and hands" /><br /><sub><b>Lessons</b>: the next key and the finger to press it with</sub></td>
+    <td width="50%"><img src=".github/assets/screenshot-profile.png" alt="Profile with personal bests and an activity calendar" /><br /><sub><b>Profile</b>: personal bests, activity and full history</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src=".github/assets/screenshot-settings.png" alt="Settings page with switches, themes and a live preview" width="70%" /><br /><sub><b>Settings</b>: behaviour, live stats, appearance and sound</sub></td>
+  </tr>
+</table>
 
 ## বাংলায় জলপাই টাইপিং
 
@@ -68,6 +96,7 @@ There was no good place to practise **Bangla typing**. English has polished, mod
 - **Modes:** time (15 s to 10 min), word count (10 to 100), real passages (1 to 10 min), and your own **custom** time, word count or text.
 - **Punctuation and numbers** can be added to random-word tests.
 - **Live stats** while you type: speed, accuracy, burst and a progress bar (each one optional).
+- An optional **on-screen keyboard** that lights up the next key.
 
 ### Learn Bijoy
 - A **23-lesson touch-typing course in 8 units**, from the home row to the Bijoy rules: vowel signs typed first, যুক্তাক্ষর, ফলা and reph.
@@ -97,15 +126,6 @@ There was no good place to practise **Bangla typing**. English has polished, mod
 
 Jolpai Typing has its own Bijoy engine ([`src/bijoy.ts`](src/bijoy.ts)). It reads which physical key you pressed, so it works the same on any keyboard and in any browser, with no Bijoy software installed. Like Bijoy itself, you type in **visual order**: a vowel sign that sits before a consonant (ি, ে, ৈ) is typed before it, and <kbd>g</kbd> joins letters into যুক্তাক্ষর. The key map follows the standard Bijoy layout and is covered by tests.
 
-## Tech stack
-
-| Part | Used |
-| --- | --- |
-| App | TypeScript and plain DOM, no framework, built with [Vite](https://vitejs.dev/) |
-| Accounts and sync | [Firebase](https://firebase.google.com/) Authentication (Google sign-in) and Cloud Firestore |
-| Tests | [Vitest](https://vitest.dev/) for the app, and the Firebase emulator for the Firestore security rules |
-| Hosting | GitHub Pages, deployed by [GitHub Actions](.github/workflows/deploy.yml) on every push to `main` |
-
 ## Run it locally
 
 You need [Node.js](https://nodejs.org/) 22 or newer.
@@ -127,6 +147,21 @@ Then open the address Vite prints (usually `http://localhost:5173/`).
 | `npm run preview` | serve the built site |
 | `npm run test:rules` | test the Firestore rules on the emulator (needs the Firebase CLI and Java) |
 | `npm run dev:emulators` | run the site against local Auth and Firestore emulators |
+
+## Tech stack
+
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-DD2C00?style=flat-square&logo=firebase&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white)
+![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-222222?style=flat-square&logo=githubpages&logoColor=white)
+
+| Part | Used |
+| --- | --- |
+| App | TypeScript and plain DOM, no framework, built with [Vite](https://vitejs.dev/) |
+| Accounts and sync | [Firebase](https://firebase.google.com/) Authentication (Google sign-in) and Cloud Firestore |
+| Tests | [Vitest](https://vitest.dev/) for the app, and the Firebase emulator for the Firestore security rules |
+| Hosting | GitHub Pages, deployed by [GitHub Actions](.github/workflows/deploy.yml) on every push to `main` |
 
 ## Project structure
 
@@ -160,6 +195,9 @@ Yes. The Learn section starts at the home row and teaches every key with the fin
 ### Does it work for English typing too?
 Yes. Switch to english for the same tests, results and progress tracking.
 
+### Is my progress saved?
+Yes, in your browser, straight away. Sign in with Google to keep it on every device.
+
 ### বিজয়ে বাংলা টাইপিং কীভাবে শিখব?
 [জলপাই টাইপিং](https://yeamin-talukder.github.io/jolpai-typing/) খুলে "learn" এ যান। হোম রো থেকে শুরু করে ধাপে ধাপে প্রতিটি কি শেখানো হয়, কোন আঙুল দিয়ে চাপতে হবে তা সহ।
 
@@ -180,7 +218,7 @@ If Jolpai Typing helps you type Bangla, please **[give it a star](https://github
 <div align="center">
 
 <a href="https://star-history.com/#Yeamin-Talukder/jolpai-typing&Date">
-  <img src="https://api.star-history.com/svg?repos=Yeamin-Talukder/jolpai-typing&type=Date" alt="Star history" width="70%" />
+  <img src="https://api.star-history.com/svg?repos=Yeamin-Talukder/jolpai-typing&type=Date" alt="Star history of Jolpai Typing" width="70%" />
 </a>
 
 </div>

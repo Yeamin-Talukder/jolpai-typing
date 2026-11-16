@@ -1942,9 +1942,12 @@ body[data-view="learn"] main { padding-top: 0; }
 .ln-map { padding: clamp(14px, 2.2dvh, 22px) clamp(14px, 1.8vw, 24px); }
 .ln-dash .ln-exam, .ln-dash .ln-mastery { padding: clamp(14px, 2.2dvh, 22px) clamp(16px, 1.8vw, 24px); }
 
-/* tall screens: no stretched, half-empty panels; the content keeps its own height and sits in the middle */
-@media (min-width: 1000px) and (min-height: 800px) {
-  body[data-view="learn"] .learn:not(.playing) { display: flex; flex-direction: column; justify-content: center; }
+/* tall screens: no stretched, half-empty panels; the content keeps its own height and sits in the middle.
+   If it is still taller than the screen it starts under the header and the page scrolls, instead of
+   spilling over the header and off the bottom. */
+@media (min-width: 1000px) and (min-height: 940px) {
+  body[data-view="learn"] #app { height: auto; min-height: 100dvh; overflow: visible; }
+  body[data-view="learn"] .learn:not(.playing) { display: flex; flex-direction: column; justify-content: safe center; }
   .learn:not(.playing) .ln-dash { height: auto; grid-template-rows: auto auto auto; gap: 20px; align-items: start; }
   .ln-map, .ln-side { align-self: stretch; }
   .ln-panel { overflow: visible; }
