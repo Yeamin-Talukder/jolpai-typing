@@ -52,7 +52,7 @@ export class Learn {
   }
 
   private stop() {
-    document.body.classList.remove('focus');
+    document.body.classList.remove('focus', 'learn-home');
     this.player?.destroy();
     this.exam?.destroy();
     this.player = null;
@@ -78,6 +78,7 @@ export class Learn {
       reset: () => { this.h.onReset().catch(err => alert(`Could not reset the course in your account: ${(err as Error).message}`)).finally(() => this.show()); },
       switchTrack: id => { this.setTrack(TRACKS[id]); this.show(); },
     }, this.track);
+    document.body.classList.add('learn-home'); // the course page scrolls like a normal page
     if (!quiet) this.enter();
     if (!quiet) this.h.onRoute(this.track === ENGLISH ? { track: 'english' } : {});
   }
