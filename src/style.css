@@ -1,4 +1,4 @@
-/* Jolpai Type: olive theme */
+/* Jolpai Typing: olive theme */
 :root {
   --bg: #1e2118;
   --sub-alt: #171a12;
@@ -2253,4 +2253,15 @@ body[data-view="learn"] main { padding-top: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .p-avatar-wrap::before, .p-stat.lit .p-stat-ico .icon, .p-activity i.today, .h-empty-ico { animation: none; }
+}
+
+/* the longer name on narrow phones: a smaller wordmark so the menu fits */
+@media (max-width: 440px) {
+  .brand { gap: 7px; }
+  .brand .logo { width: 26px; height: 26px; }
+  .brand-text { font-size: 17px; letter-spacing: -.4px; }
+  .brand-sub { top: -11px; font-size: 9.5px; }
+}
+@media (max-width: 360px) {
+  .brand-text { font-size: 15px; }
 }

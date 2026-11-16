@@ -62,7 +62,7 @@ const SPECS: Spec[] = [
     intro: [
       { title: 'Sit and rest your hands', text: 'Sit up straight, wrists relaxed and just above the keyboard. Your eight fingers rest on the middle row; your thumbs rest on the space bar. You will look at the screen, not at your hands.' },
       { title: 'Find the bumps', text: 'Feel the small bumps on F and J. Put your left index finger on F and your right index finger on J. From here every key is a short reach, so you never need to look down.' },
-      { title: 'Bangla with English keys', text: 'Bijoy puts Bangla letters on an ordinary keyboard. Jolpai Type turns your key presses into Bangla itself, so switch off any Bijoy or Avro software first. Press J then F and watch:', demo: 'jf' },
+      { title: 'Bangla with English keys', text: 'Bijoy puts Bangla letters on an ordinary keyboard. Jolpai Typing turns your key presses into Bangla itself, so switch off any Bijoy or Avro software first. Press J then F and watch:', demo: 'jf' },
     ] },
   { id: 'home-2', unit: 1, title: 'ত and দ', bn: 'ত দ', summary: 'Right middle and ring fingers: K is ত, L is দ.', newKeys: HOME_R, drill: 22, words: 12, goal: 8 },
   { id: 'home-3', unit: 1, title: 'Vowel signs ি ু ৃ', bn: 'ি ু ৃ', summary: 'Your left hand types the vowel signs. And ি comes first.', newKeys: HOME_L, drill: 24, words: 12, goal: 8,

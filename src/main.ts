@@ -968,7 +968,7 @@ async function openShared(id: string) {
     return;
   }
   sharedData = data;
-  document.title = `${data.name} · Jolpai Type`;
+  document.title = `${data.name} · Jolpai Typing`;
   // open on the language they type most
   const bn = data.results.filter(e => e.lang === 'bangla').length;
   profileView.lang = bn * 2 >= data.results.length && bn > 0 ? 'bangla' : 'english';

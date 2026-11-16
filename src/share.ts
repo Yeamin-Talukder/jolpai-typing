@@ -75,7 +75,7 @@ async function qrPng(qr: QR, caption: string): Promise<Blob> {
   g.fillText(caption, w / 2, w + 22);
   g.fillStyle = '#6b7353';
   g.font = '16px "Lexend Deca", system-ui, sans-serif';
-  g.fillText('Jolpai Type · Bangla & English typing', w / 2, w + 50);
+  g.fillText('Jolpai Typing · Bangla & English typing', w / 2, w + 50);
   return new Promise(res => cv.toBlob(b => res(b!), 'image/png'));
 }
 
@@ -164,14 +164,14 @@ export class SharePanel {
         break;
       }
       case 'share':
-        if (id) navigator.share({ title: `${this.act.name()} on Jolpai Type`, text: `See my Bangla and English typing stats on Jolpai Type`, url: shareLink(id) }).catch(() => { /* cancelled */ });
+        if (id) navigator.share({ title: `${this.act.name()} on Jolpai Typing`, text: `See my Bangla and English typing stats on Jolpai Typing`, url: shareLink(id) }).catch(() => { /* cancelled */ });
         break;
       case 'png':
         if (this.qr) {
           const blob = await qrPng(this.qr, `${this.act.name()}'s typing profile`);
           const a = document.createElement('a');
           a.href = URL.createObjectURL(blob);
-          a.download = 'jolpai-type-profile-qr.png';
+          a.download = 'jolpai-typing-profile-qr.png';
           a.click();
           setTimeout(() => URL.revokeObjectURL(a.href), 1000);
         }

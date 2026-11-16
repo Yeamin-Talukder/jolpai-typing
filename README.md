@@ -1,26 +1,26 @@
 <div align="center">
 
-<a href="https://yeamin-talukder.github.io/jolpai-type/">
-  <img src=".github/assets/banner.png" alt="Jolpai Type (জলপাই টাইপ): free online Bangla typing practice and Bijoy typing tutor" width="100%" />
+<a href="https://yeamin-talukder.github.io/jolpai-typing/">
+  <img src=".github/assets/banner.png" alt="Jolpai Typing (জলপাই টাইপিং): free online Bangla typing practice and Bijoy typing tutor" width="100%" />
 </a>
 
-<h1>Jolpai Type: Bangla (Bijoy) typing practice and tutor</h1>
+<h1>Jolpai Typing: Bangla (Bijoy) typing practice and tutor</h1>
 
-<p><b>জলপাই টাইপ</b>: অনলাইনে বিনামূল্যে বাংলা টাইপিং অনুশীলন ও বিজয় টাইপিং শেখার জায়গা</p>
+<p><b>জলপাই টাইপিং</b>: অনলাইনে বিনামূল্যে বাংলা টাইপিং অনুশীলন ও বিজয় টাইপিং শেখার জায়গা</p>
 
 <p><b>Made for Bangla typing</b> · বাংলা টাইপিংয়ের জন্য তৈরি · for everyone who wants to type Bangla fast and correctly</p>
 
-[![Stars](https://img.shields.io/github/stars/Yeamin-Talukder/jolpai-type?style=for-the-badge&logo=github&label=stars&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-type/stargazers)
-[![Forks](https://img.shields.io/github/forks/Yeamin-Talukder/jolpai-type?style=for-the-badge&logo=github&label=forks&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-type/network/members)
-[![Watchers](https://img.shields.io/github/watchers/Yeamin-Talukder/jolpai-type?style=for-the-badge&logo=github&label=watchers&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-type/watchers)
-[![Views](https://hits.sh/github.com/Yeamin-Talukder/jolpai-type.svg?style=for-the-badge&label=views&color=a3b84a&labelColor=1e2118)](https://hits.sh/github.com/Yeamin-Talukder/jolpai-type/)
+[![Stars](https://img.shields.io/github/stars/Yeamin-Talukder/jolpai-typing?style=for-the-badge&logo=github&label=stars&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/stargazers)
+[![Forks](https://img.shields.io/github/forks/Yeamin-Talukder/jolpai-typing?style=for-the-badge&logo=github&label=forks&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/network/members)
+[![Watchers](https://img.shields.io/github/watchers/Yeamin-Talukder/jolpai-typing?style=for-the-badge&logo=github&label=watchers&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/watchers)
+[![Views](https://hits.sh/github.com/Yeamin-Talukder/jolpai-typing.svg?style=for-the-badge&label=views&color=a3b84a&labelColor=1e2118)](https://hits.sh/github.com/Yeamin-Talukder/jolpai-typing/)
 
-[![Live site](https://img.shields.io/badge/live-yeamin--talukder.github.io%2Fjolpai--type-a3b84a?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1e2118)](https://yeamin-talukder.github.io/jolpai-type/)
-[![Deploy](https://img.shields.io/github/actions/workflow/status/Yeamin-Talukder/jolpai-type/deploy.yml?branch=main&style=for-the-badge&label=deploy&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-type/actions/workflows/deploy.yml)
-[![Last commit](https://img.shields.io/github/last-commit/Yeamin-Talukder/jolpai-type?style=for-the-badge&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-type/commits/main)
-[![Issues](https://img.shields.io/github/issues/Yeamin-Talukder/jolpai-type?style=for-the-badge&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-type/issues)
-[![License: MIT](https://img.shields.io/github/license/Yeamin-Talukder/jolpai-type?style=for-the-badge&color=a3b84a&labelColor=1e2118)](LICENSE)
-[![Made for Bangla typing](https://img.shields.io/badge/made%20for-Bangla%20typing-a3b84a?style=for-the-badge&labelColor=1e2118)](https://yeamin-talukder.github.io/jolpai-type/)
+[![Live site](https://img.shields.io/badge/live-yeamin--talukder.github.io%2Fjolpai--typing-a3b84a?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1e2118)](https://yeamin-talukder.github.io/jolpai-typing/)
+[![Deploy](https://img.shields.io/github/actions/workflow/status/Yeamin-Talukder/jolpai-typing/deploy.yml?branch=main&style=for-the-badge&label=deploy&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/actions/workflows/deploy.yml)
+[![Last commit](https://img.shields.io/github/last-commit/Yeamin-Talukder/jolpai-typing?style=for-the-badge&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/commits/main)
+[![Issues](https://img.shields.io/github/issues/Yeamin-Talukder/jolpai-typing?style=for-the-badge&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/issues)
+[![License: MIT](https://img.shields.io/github/license/Yeamin-Talukder/jolpai-typing?style=for-the-badge&color=a3b84a&labelColor=1e2118)](LICENSE)
+[![Made for Bangla typing](https://img.shields.io/badge/made%20for-Bangla%20typing-a3b84a?style=for-the-badge&labelColor=1e2118)](https://yeamin-talukder.github.io/jolpai-typing/)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)
@@ -28,30 +28,30 @@
 ![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white)
 ![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-222222?style=flat-square&logo=githubpages&logoColor=white)
 
-**[Open Jolpai Type](https://yeamin-talukder.github.io/jolpai-type/)** · [Report a bug](https://github.com/Yeamin-Talukder/jolpai-type/issues/new) · [Suggest a feature](https://github.com/Yeamin-Talukder/jolpai-type/issues/new)
+**[Open Jolpai Typing](https://yeamin-talukder.github.io/jolpai-typing/)** · [Report a bug](https://github.com/Yeamin-Talukder/jolpai-typing/issues/new) · [Suggest a feature](https://github.com/Yeamin-Talukder/jolpai-typing/issues/new)
 
 </div>
 
 ---
 
-## Why Jolpai Type
+## Why Jolpai Typing
 
-Jolpai Type is a free online **Bangla typing test** and **Bijoy typing tutor** that runs in your browser. Practise Bangla (Bengali) typing on the Bijoy keyboard layout, take English typing tests, and learn Bijoy touch typing from the very first key.
+Jolpai Typing is a free online **Bangla typing test** and **Bijoy typing tutor** that runs in your browser. Practise Bangla (Bengali) typing on the Bijoy keyboard layout, take English typing tests, and learn Bijoy touch typing from the very first key.
 
 There was no good place to practise **Bangla typing**. English has polished, modern typing sites, but people who type Bangla were left with old, cluttered pages that are hard to enjoy.
 
-**Jolpai Type (জলপাই টাইপ)** gives Bangla typing a good environment: a clean, calm, distraction-free typing test with a careful design, and a course that teaches **Bijoy** touch typing step by step. English is here too.
+**Jolpai Typing (জলপাই টাইপিং)** gives Bangla typing a good environment: a clean, calm, distraction-free typing test with a careful design, and a course that teaches **Bijoy** touch typing step by step. English is here too.
 
 - **No software to install.** Press the Bijoy keys on any keyboard and the site turns them into Bangla as you type.
 - **Free and open source.** No sign-up needed. Sign in with Google only if you want your progress on every device.
 
 <div align="center">
-  <img src=".github/assets/screenshot-test.png" alt="Jolpai Type online typing test for Bangla (Bijoy) and English" width="92%" />
+  <img src=".github/assets/screenshot-test.png" alt="Jolpai Typing online typing test for Bangla (Bijoy) and English" width="92%" />
 </div>
 
-## বাংলায় জলপাই টাইপ
+## বাংলায় জলপাই টাইপিং
 
-**জলপাই টাইপ** একটি বিনামূল্যের অনলাইন **বাংলা টাইপিং** অনুশীলনের ওয়েবসাইট। এখানে **বিজয় কি-বোর্ড** লেআউটে বাংলা টাইপ করা যায় যেকোনো কি-বোর্ডে, কোনো বিজয় বা অভ্র সফটওয়্যার ইনস্টল করতে হয় না। সুন্দর, শান্ত ও ঝামেলামুক্ত পরিবেশে টাইপিং অনুশীলন করুন আর ধাপে ধাপে **বিজয় টাচ টাইপিং শিখুন**।
+**জলপাই টাইপিং** একটি বিনামূল্যের অনলাইন **বাংলা টাইপিং** অনুশীলনের ওয়েবসাইট। এখানে **বিজয় কি-বোর্ড** লেআউটে বাংলা টাইপ করা যায় যেকোনো কি-বোর্ডে, কোনো বিজয় বা অভ্র সফটওয়্যার ইনস্টল করতে হয় না। সুন্দর, শান্ত ও ঝামেলামুক্ত পরিবেশে টাইপিং অনুশীলন করুন আর ধাপে ধাপে **বিজয় টাচ টাইপিং শিখুন**।
 
 - **বাংলা টাইপিং টেস্ট:** সময়, শব্দ সংখ্যা, অনুচ্ছেদ বা নিজের লেখা দিয়ে অনুশীলন। ইংরেজি টাইপিং টেস্টও আছে।
 - **বিজয় টাইপিং কোর্স:** ৮টি ইউনিটে ২৩টি পাঠ, হোম রো থেকে যুক্তাক্ষর, ফলা ও রেফ পর্যন্ত। প্রতিটি কি কোন আঙুলে চাপতে হবে তা কি-বোর্ড ও হাতের ছবিতে দেখানো হয়।
@@ -59,7 +59,7 @@ There was no good place to practise **Bangla typing**. English has polished, mod
 - **অগ্রগতি:** গতি (WPM), নির্ভুলতা, সেরা ফলাফল, অগ্রগতির গ্রাফ ও প্রতিদিনের অনুশীলনের হিসাব।
 - **বিনামূল্যে ও ওপেন সোর্স:** সাইন আপ লাগে না। চাইলে Google দিয়ে সাইন ইন করে সব ডিভাইসে অগ্রগতি রাখুন।
 
-👉 **[এখনই অনুশীলন শুরু করুন](https://yeamin-talukder.github.io/jolpai-type/)**
+👉 **[এখনই অনুশীলন শুরু করুন](https://yeamin-talukder.github.io/jolpai-typing/)**
 
 ## Features
 
@@ -95,7 +95,7 @@ There was no good place to practise **Bangla typing**. English has polished, mod
 
 ## How Bijoy typing works here
 
-Jolpai Type has its own Bijoy engine ([`src/bijoy.ts`](src/bijoy.ts)). It reads which physical key you pressed, so it works the same on any keyboard and in any browser, with no Bijoy software installed. Like Bijoy itself, you type in **visual order**: a vowel sign that sits before a consonant (ি, ে, ৈ) is typed before it, and <kbd>g</kbd> joins letters into যুক্তাক্ষর. The key map follows the standard Bijoy layout and is covered by tests.
+Jolpai Typing has its own Bijoy engine ([`src/bijoy.ts`](src/bijoy.ts)). It reads which physical key you pressed, so it works the same on any keyboard and in any browser, with no Bijoy software installed. Like Bijoy itself, you type in **visual order**: a vowel sign that sits before a consonant (ি, ে, ৈ) is typed before it, and <kbd>g</kbd> joins letters into যুক্তাক্ষর. The key map follows the standard Bijoy layout and is covered by tests.
 
 ## Tech stack
 
@@ -111,8 +111,8 @@ Jolpai Type has its own Bijoy engine ([`src/bijoy.ts`](src/bijoy.ts)). It reads 
 You need [Node.js](https://nodejs.org/) 22 or newer.
 
 ```bash
-git clone https://github.com/Yeamin-Talukder/jolpai-type.git
-cd jolpai-type
+git clone https://github.com/Yeamin-Talukder/jolpai-typing.git
+cd jolpai-typing
 npm install
 npm run dev
 ```
@@ -149,7 +149,7 @@ scripts/             sources of the README banner and the social preview image
 ## FAQ
 
 ### How can I practise Bangla typing online for free?
-Open [Jolpai Type](https://yeamin-talukder.github.io/jolpai-type/), choose বাংলা (বিজয়), and start typing. It is free, with no sign-up and nothing to install.
+Open [Jolpai Typing](https://yeamin-talukder.github.io/jolpai-typing/), choose বাংলা (বিজয়), and start typing. It is free, with no sign-up and nothing to install.
 
 ### Do I need Bijoy or Avro software installed?
 No. The site turns your Bijoy key presses into Bangla by itself, on any keyboard and in any modern browser.
@@ -161,33 +161,33 @@ Yes. The Learn section starts at the home row and teaches every key with the fin
 Yes. Switch to english for the same tests, results and progress tracking.
 
 ### বিজয়ে বাংলা টাইপিং কীভাবে শিখব?
-[জলপাই টাইপ](https://yeamin-talukder.github.io/jolpai-type/) খুলে "learn" এ যান। হোম রো থেকে শুরু করে ধাপে ধাপে প্রতিটি কি শেখানো হয়, কোন আঙুল দিয়ে চাপতে হবে তা সহ।
+[জলপাই টাইপিং](https://yeamin-talukder.github.io/jolpai-typing/) খুলে "learn" এ যান। হোম রো থেকে শুরু করে ধাপে ধাপে প্রতিটি কি শেখানো হয়, কোন আঙুল দিয়ে চাপতে হবে তা সহ।
 
 ### বাংলা টাইপিং অনুশীলনের জন্য কি টাকা লাগে?
-না, জলপাই টাইপ সম্পূর্ণ বিনামূল্যে, কোনো সফটওয়্যার ইনস্টল করতে হয় না।
+না, জলপাই টাইপিং সম্পূর্ণ বিনামূল্যে, কোনো সফটওয়্যার ইনস্টল করতে হয় না।
 
 ## Contributing
 
 Ideas, bug reports and pull requests are welcome.
 
-1. [Open an issue](https://github.com/Yeamin-Talukder/jolpai-type/issues/new) to report a bug or suggest something.
+1. [Open an issue](https://github.com/Yeamin-Talukder/jolpai-typing/issues/new) to report a bug or suggest something.
 2. For code changes, fork the repo, make a branch, and check that `npm test` and `npm run build` pass before opening a pull request.
 
 ## Support the project
 
-If Jolpai Type helps you type Bangla, please **[give it a star](https://github.com/Yeamin-Talukder/jolpai-type)**. It helps other Bangla typists find it.
+If Jolpai Typing helps you type Bangla, please **[give it a star](https://github.com/Yeamin-Talukder/jolpai-typing)**. It helps other Bangla typists find it.
 
 <div align="center">
 
-<a href="https://star-history.com/#Yeamin-Talukder/jolpai-type&Date">
-  <img src="https://api.star-history.com/svg?repos=Yeamin-Talukder/jolpai-type&type=Date" alt="Star history" width="70%" />
+<a href="https://star-history.com/#Yeamin-Talukder/jolpai-typing&Date">
+  <img src="https://api.star-history.com/svg?repos=Yeamin-Talukder/jolpai-typing&type=Date" alt="Star history" width="70%" />
 </a>
 
 </div>
 
 ## License
 
-Jolpai Type is free and open source under the [MIT License](LICENSE). You can use, change and share the code, as long as the copyright notice stays with it.
+Jolpai Typing is free and open source under the [MIT License](LICENSE). You can use, change and share the code, as long as the copyright notice stays with it.
 
 ## Author
 
@@ -201,6 +201,6 @@ Made by **[Md Yeamin Talukder](https://github.com/Yeamin-Talukder)**, also the m
 
 বাংলা টাইপিংয়ের জন্য ভালোবাসা দিয়ে তৈরি · বিনামূল্যে বাংলা টাইপিং অনুশীলন ও বিজয় টাইপিং শেখা
 
-<a href="https://yeamin-talukder.github.io/jolpai-type/"><b>yeamin-talukder.github.io/jolpai-type</b></a>
+<a href="https://yeamin-talukder.github.io/jolpai-typing/"><b>yeamin-talukder.github.io/jolpai-typing</b></a>
 
 </div>

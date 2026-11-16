@@ -1,5 +1,5 @@
 // Practice passages: notices and general-knowledge paragraphs.
-// Original text written for Jolpai Type.
+// Original text written for Jolpai Typing.
 
 export const ENGLISH_PASSAGES: string[] = [
   `Bangla is the mother tongue of more than two hundred and thirty million people. In nineteen fifty two, students in Dhaka gave their lives so that Bangla would be honoured as a state language, and today the whole world remembers them on the twenty first of February, International Mother Language Day. Learning to type Bangla well is a small way to keep this language alive in the digital world. With a little practice every day, anyone can write letters, stories and messages in Bangla as easily as in English.`,

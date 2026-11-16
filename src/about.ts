@@ -1,4 +1,4 @@
-// The About page: why Jolpai Type exists, what it can do, who made it, and
+// The About page: why Jolpai Typing exists, what it can do, who made it, and
 // where the code lives. Numbers on the page come from the code itself, so
 // they stay right as the site grows.
 import { unicodeToSegments } from './bijoy';
@@ -6,7 +6,7 @@ import { countUp, icon, logo, type IconName } from './icons';
 import { LESSONS, UNITS } from './learn/course';
 import { THEMES } from './themes';
 
-const REPO = 'Yeamin-Talukder/jolpai-type';
+const REPO = 'Yeamin-Talukder/jolpai-typing';
 const REPO_URL = `https://github.com/${REPO}`;
 const AUTHOR = 'Md Yeamin Talukder';
 const AUTHOR_URL = 'https://github.com/Yeamin-Talukder';
@@ -48,7 +48,7 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
         ${logo('ab-logo')}
         <div class="ab-hero-text">
           <span class="ab-eyebrow">${icon('info', 14)}about</span>
-          <h1>Jolpai Type <span class="ab-bn">জলপাই টাইপ</span></h1>
+          <h1>Jolpai Typing <span class="ab-bn">জলপাই টাইপিং</span></h1>
           <p class="ab-tag">Practise <b>Bangla (Bijoy)</b> and <b>English</b> typing in a clean, calm place, and learn Bijoy touch typing from the very first key. Free.</p>
           <div class="ab-cta">
             <button class="btn primary" data-go="test">${icon('keyboard', 16)}start typing</button>
@@ -73,7 +73,7 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
       <div class="ab-why-body">
         <p>There was no good place to practise <b>Bangla typing</b>. English has polished, modern typing sites, but people who
           type Bangla were left with old, cluttered pages that are hard to enjoy.</p>
-        <p>Jolpai Type gives Bangla typing a <b>good environment</b>: a clean, distraction-free typing test with a better design,
+        <p>Jolpai Typing gives Bangla typing a <b>good environment</b>: a clean, distraction-free typing test with a better design,
           and a course that teaches <b>Bijoy</b> touch typing step by step. English is here too.</p>
       </div>
     </section>
@@ -112,7 +112,7 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
 
       <section class="ab-card ab-repo">
         <h2><span class="ab-h-ico">${GITHUB}</span>open source</h2>
-        <p>Jolpai Type is free and open source. If it helps you practise, please <b>give it a star on GitHub</b>: it helps other
+        <p>Jolpai Typing is free and open source. If it helps you practise, please <b>give it a star on GitHub</b>: it helps other
           Bangla typists find it.</p>
         <div class="ab-stats" aria-live="polite">
           <span class="ab-stat">${STAR}<b id="ab-stars">–</b> stars</span>

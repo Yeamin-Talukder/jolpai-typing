@@ -255,7 +255,7 @@ export function renderProfile(el: HTMLElement, view: ProfileView, user: ProfileU
     ${list.length > view.shown ? `<button id="h-more" class="btn more">show ${Math.min(25, list.length - view.shown)} more · ${list.length - view.shown} left</button>` : ''}`}
     ${shared ? `<div class="p-invite">
       <div><div class="p-invite-title">Practise typing like ${esc(shared.name.split(' ')[0])}</div>
-      <p>Jolpai Type is free typing practice for Bangla (Bijoy) and English, with a course to learn Bijoy touch typing.</p></div>
+      <p>Jolpai Typing is free typing practice for Bangla (Bijoy) and English, with a course to learn Bijoy touch typing.</p></div>
       <button id="p-start" class="btn primary">${icon('keyboard', 15)}start typing</button>
     </div>` : `<div class="h-foot">
       <span class="h-where">${icon(user ? 'cloud' : 'device', 14)}${user ? `Saved to your account (${esc(user.email || user.name)}), on every device you sign in on.` : 'Saved only in this browser. Sign in to keep your history on every device.'}</span>

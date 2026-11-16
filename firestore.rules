@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Jolpai Type: each signed-in person can read and write only their own
+// Jolpai Typing: each signed-in person can read and write only their own
 // profile and results. Nobody else can read them.
 service cloud.firestore {
   match /databases/{database}/documents {

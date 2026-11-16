@@ -1,8 +1,8 @@
-# Jolpai Type
+# Jolpai Typing
 # Note: crawlers only read robots.txt at the root of a host, so on GitHub Pages
-# this file (served at /jolpai-type/robots.txt) is informational. Submit the
+# this file (served at /jolpai-typing/robots.txt) is informational. Submit the
 # sitemap below in Google Search Console and Bing Webmaster Tools instead.
 User-agent: *
 Allow: /
 
-Sitemap: https://yeamin-talukder.github.io/jolpai-type/sitemap.xml
+Sitemap: https://yeamin-talukder.github.io/jolpai-typing/sitemap.xml
