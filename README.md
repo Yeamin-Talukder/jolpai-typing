@@ -23,6 +23,8 @@
 
 ### [Open Jolpai Typing →](https://yeamin-talukder.github.io/jolpai-typing/)
 
+[বাংলা টাইপিং টেস্ট (Bangla typing test)](https://yeamin-talukder.github.io/jolpai-typing/bangla-typing-test/) · [বিজয় টাইপিং শিখুন (Learn Bijoy typing)](https://yeamin-talukder.github.io/jolpai-typing/bijoy-typing-tutor/)
+
 [Report a bug](https://github.com/Yeamin-Talukder/jolpai-typing/issues/new) · [Suggest a feature](https://github.com/Yeamin-Talukder/jolpai-typing/issues/new) · [Give it a star](https://github.com/Yeamin-Talukder/jolpai-typing/stargazers)
 
 <sub>Formerly <b>Jolpai Type</b>. Old links still work.</sub>

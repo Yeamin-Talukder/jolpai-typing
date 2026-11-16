@@ -1,0 +1,76 @@
+/* The guide pages (bangla-typing-test, bijoy-typing-tutor): static, readable, same look as the app. */
+:root {
+  --bg: #1e2118; --sub-alt: #262a1f; --main: #a3b84a; --text: #e6e5da; --sub: #8b9170; --line: rgba(139, 145, 112, .22);
+  --tint: rgba(163, 184, 74, .12); --font-ui: 'Lexend Deca', 'Segoe UI', system-ui, sans-serif; --font-bn: 'Noto Sans Bengali', 'Nirmala UI', var(--font-ui);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.7 var(--font-ui); -webkit-font-smoothing: antialiased; }
+:lang(bn) { font-family: var(--font-bn); }
+[lang="en"] { font-family: var(--font-ui); }
+a { color: var(--main); text-underline-offset: 3px; }
+h1, h2, h3 { line-height: 1.25; margin: 0; }
+
+.lp-top { max-width: 1080px; margin: 0 auto; padding: 22px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.lp-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--main); text-decoration: none; font: 600 24px/1 var(--font-ui); }
+.lp-brand span { position: relative; color: var(--text); }
+.lp-brand b { color: var(--main); font-weight: 600; }
+.lp-brand small { position: absolute; top: -13px; left: 0; color: var(--sub); font: 400 11px var(--font-bn); }
+.lp-logo { width: 34px; height: 34px; }
+.lp-top nav { display: flex; gap: 6px; flex-wrap: wrap; }
+.lp-top nav a { padding: 7px 13px; border-radius: 10px; background: var(--sub-alt); color: var(--sub); text-decoration: none; font-size: 15px; }
+.lp-top nav a:hover, .lp-top nav a[aria-current] { color: var(--main); background: var(--tint); }
+
+.lp { max-width: 1080px; margin: 0 auto; padding: 8px 20px 40px; display: flex; flex-direction: column; gap: 44px; }
+.lp section > h2 { font-size: 26px; margin-bottom: 14px; }
+.lp section > h2 span[lang] { color: var(--sub); font-size: .7em; font-weight: 400; margin-left: 6px; }
+.lp p { margin: 0 0 12px; color: #c9c8bb; }
+.lp b { color: var(--text); }
+
+.lp-hero { display: flex; flex-direction: column; gap: 14px; padding: 34px; border-radius: 26px;
+  background: radial-gradient(120% 140% at 0% 0%, rgba(163, 184, 74, .2), transparent 55%), var(--sub-alt); }
+.lp-eyebrow { margin: 0 !important; color: var(--main) !important; font: 600 13px var(--font-ui); text-transform: uppercase; letter-spacing: .08em; }
+.lp-hero h1 { font-size: clamp(32px, 5vw, 50px); }
+.lp-hero h1 span { display: block; margin-top: 6px; color: var(--main); font-size: .55em; }
+.lp-lead { font-size: 19px; max-width: 62ch; }
+.lp-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+.lp-btn { display: inline-flex; align-items: center; padding: 12px 20px; border-radius: 12px; background: var(--bg); color: var(--text); text-decoration: none; font-weight: 600; transition: transform .2s; }
+.lp-btn:hover { transform: translateY(-2px); }
+.lp-btn.primary { background: var(--main); color: var(--bg); }
+.lp-shot { width: 100%; height: auto; margin-top: 8px; border-radius: 16px; border: 1px solid var(--line); }
+
+.lp-steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.lp-steps li { counter-increment: s; position: relative; padding: 18px 18px 18px 58px; border-radius: 16px; background: var(--sub-alt); color: #c9c8bb; }
+.lp-steps li::before { content: counter(s); position: absolute; left: 16px; top: 16px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--main); color: var(--bg); font: 600 15px var(--font-ui); }
+
+.lp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.lp-grid > div { padding: 20px; border-radius: 16px; background: var(--sub-alt); }
+.lp-grid h3 { font-size: 18px; margin-bottom: 8px; color: var(--main); }
+.lp-grid p { margin: 0; font-size: 15.5px; }
+
+.lp-units { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+.lp-units li { display: flex; gap: 14px; padding: 16px; border-radius: 16px; background: var(--sub-alt); }
+.lp-n { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--tint); color: var(--main); font: 600 17px var(--font-bn); }
+.lp-units b .bn { color: var(--sub); font: 400 15px var(--font-bn); margin-left: 4px; }
+.lp-units p { margin: 2px 0 4px; font-size: 15px; font-family: var(--font-ui); }
+.lp-units small { color: var(--sub); font-size: 13px; }
+
+.lp details { border-bottom: 1px solid var(--line); padding: 12px 0; }
+.lp summary { cursor: pointer; font-weight: 600; color: var(--text); }
+.lp details p { margin: 10px 0 0; }
+.lp kbd { padding: 1px 7px; border-radius: 6px; background: var(--sub-alt); border: 1px solid var(--line); font: 14px 'JetBrains Mono', monospace; }
+
+.lp-end { text-align: center; padding: 34px 20px; border-radius: 22px; background: var(--sub-alt); }
+.lp-end h2 { margin-bottom: 18px !important; }
+
+.lp-foot { max-width: 1080px; margin: 0 auto; padding: 24px 20px 40px; border-top: 1px solid var(--line); color: var(--sub); font-size: 14px; }
+.lp-foot p { margin: 4px 0; }
+
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  .lp-hero { padding: 22px 18px; border-radius: 20px; }
+  .lp-lead { font-size: 17px; }
+  .lp-btn { width: 100%; justify-content: center; }
+  .lp-top nav { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .lp-btn { transition: none; } }

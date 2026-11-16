@@ -128,7 +128,8 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
       </section>
     </div>
 
-    <p class="ab-foot" data-reveal>${icon('lessons', 14)}Built with TypeScript, Vite and Firebase · made for Bangla typists</p>`;
+    <p class="ab-foot" data-reveal>${icon('lessons', 14)}Built with TypeScript, Vite and Firebase · made for Bangla typists</p>
+    <p class="ab-foot ab-guides" data-reveal><a href="./bangla-typing-test/">Bangla typing test guide · বাংলা টাইপিং টেস্ট</a><span>·</span><a href="./bijoy-typing-tutor/">Learn Bijoy typing · বিজয় টাইপিং শিখুন</a></p>`;
 
   el.onclick = e => {
     const b = (e.target as Element).closest<HTMLElement>('[data-go]');

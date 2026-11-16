@@ -2275,3 +2275,9 @@ body[data-view="learn"] main { padding-top: 0; }
 .ab-name .icon { flex: none; margin-top: 4px; color: var(--main); }
 .ab-name b { color: var(--text); }
 .ab-inline { color: var(--main); text-underline-offset: 3px; }
+
+/* read by screen readers and search engines, not shown */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.ab-guides { flex-wrap: wrap; margin-top: -8px; }
+.ab-guides a { color: var(--sub); text-decoration: none; }
+.ab-guides a:hover { color: var(--main); text-decoration: underline; }

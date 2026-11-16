@@ -1224,9 +1224,24 @@ const drawMenuThemes = renderThemePicker($('themes'), () => {
 function drawThemes() { drawMenuThemes(); drawThemeButton(); }
 drawThemeButton();
 
+// links from the guide pages and search results: ?lang=bangla or ?lang=english starts that
+// test, ?view=learn opens the Bijoy course
+const linkParams = new URLSearchParams(location.search);
+const linkLang = linkParams.get('lang');
+if (linkLang === 'bangla' || linkLang === 'english') {
+  settings.lang = linkLang;
+  if (settings.mode === 'custom' || settings.mode === 'lesson') { settings.mode = 'time'; settings.amount = 30; }
+  saveSettings();
+}
+
 applyPrefs();
 renderConfig();
 reset();
 // a shared-profile link: ?p=<share id>
-const sharedParam = new URLSearchParams(location.search).get('p');
+const sharedParam = linkParams.get('p');
 if (sharedParam) openShared(sharedParam);
+else {
+  if (linkParams.get('view') === 'learn') showView('learn');
+  // one clean address for the page, whichever link brought you here
+  if (linkLang || linkParams.has('view')) history.replaceState(null, '', location.pathname);
+}
