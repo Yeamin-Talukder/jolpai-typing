@@ -364,14 +364,13 @@ export function countLesson(secs: number) {
   count({ lessons: 1, seconds: Math.round(Math.min(3600, Math.max(1, secs))) });
 }
 
-/** The site totals, or null when they cannot be loaded (offline, or none yet). */
+/** The site totals (all zero before the first count), or null when they cannot be loaded. */
 export async function loadSiteStats(): Promise<SiteStats | null> {
   if (!accountsEnabled()) return null;
   try {
     const { db, f } = await load();
     const snap = await f.getDoc(f.doc(db, 'stats', 'site'));
-    if (!snap.exists()) return null;
-    const d = snap.data();
+    const d = snap.exists() ? snap.data() : {}; // nothing counted yet: all zero
     return Object.fromEntries(STAT_KEYS.map(k => [k, Number(d[k]) || 0])) as SiteStats;
   } catch (err) {
     console.warn('Could not load the site totals', err);
