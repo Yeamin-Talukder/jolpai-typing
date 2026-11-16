@@ -13,7 +13,7 @@
 [![Stars](https://img.shields.io/github/stars/Yeamin-Talukder/jolpai-typing?style=for-the-badge&logo=github&label=stars&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/stargazers)
 [![Forks](https://img.shields.io/github/forks/Yeamin-Talukder/jolpai-typing?style=for-the-badge&logo=github&label=forks&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/network/members)
 [![Watchers](https://img.shields.io/github/watchers/Yeamin-Talukder/jolpai-typing?style=for-the-badge&logo=github&label=watchers&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/watchers)
-[![Views](https://hits.sh/github.com/Yeamin-Talukder/jolpai-typing.svg?style=for-the-badge&label=views&color=a3b84a&labelColor=1e2118)](https://hits.sh/github.com/Yeamin-Talukder/jolpai-typing/)
+[![Views](https://hits.sh/github.com/Yeamin-Talukder/jolpai-type.svg?style=for-the-badge&label=views&color=a3b84a&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing)
 
 [![Live site](https://img.shields.io/badge/live-yeamin--talukder.github.io%2Fjolpai--typing-a3b84a?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1e2118)](https://yeamin-talukder.github.io/jolpai-typing/)
 [![Deploy](https://img.shields.io/github/actions/workflow/status/Yeamin-Talukder/jolpai-typing/deploy.yml?branch=main&style=for-the-badge&label=deploy&labelColor=1e2118)](https://github.com/Yeamin-Talukder/jolpai-typing/actions/workflows/deploy.yml)
