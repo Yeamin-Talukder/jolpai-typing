@@ -4,9 +4,10 @@
 import { Keyboard } from '../keyboard';
 import { icon } from '../icons';
 import { LESSONS, UNITS, lessonsInUnit, weakKeysLesson, type CourseLesson } from './course';
-import { fingerFor, physicalKey } from './fingers';
+import { FINGER_NAME, fingerFor, needsShift, physicalKey } from './fingers';
 import { doneCount, isUnlocked, keyAccuracy, learnedKeys, learnStreak, nextLesson, starCount, weakKeys, type LearnData } from './progress';
 import { keyText, starSvg } from './player';
+import './learn-ui.css';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const SIGN = /^[ঁ-ঃ়া-্ৗ]/;
@@ -27,6 +28,42 @@ let shownFor = '';
 
 const unitDone = (d: LearnData, n: number) => lessonsInUnit(n).filter(l => (d.lessons[l.id]?.stars ?? 0) > 0).length;
 
+/** "Home ⇧" reads as "Home" with "+ Shift" under it in the tabs. */
+const unitLabel = (short: string) => esc(short).replace(' ⇧', '<small>+ Shift</small>');
+/** Where a lesson sits, like 2.3. */
+const lessonNo = (l: CourseLesson) => `${l.unit}.${lessonsInUnit(l.unit).indexOf(l) + 1}`;
+type LessonState = 'done' | 'current' | 'open' | 'locked';
+function lessonState(d: LearnData, l: CourseLesson, nextId: string): LessonState {
+  if (!isUnlocked(d, LESSONS.indexOf(l))) return 'locked';
+  if ((d.lessons[l.id]?.stars ?? 0) > 0) return 'done';
+  return l.id === nextId ? 'current' : 'open';
+}
+
+/** One key as a small keycap: the Bangla letter, the key to press, and its finger's colour. */
+function keycap(k: string, size = '') {
+  const shift = needsShift(k);
+  const f = fingerFor(k);
+  return `<span class="ln-kc ${size} z-${f}" title="${esc(physicalKey(k).toUpperCase())}${shift ? ' with Shift' : ''} · ${FINGER_NAME[f]}"><b class="bn">${esc(showChar(keyText(k)))}</b><i>${shift ? '⇧' : ''}${esc(physicalKey(k).toUpperCase())}</i></span>`;
+}
+
+function lessonCard(d: LearnData, l: CourseLesson, j: number, nextId: string): string {
+  const rec = d.lessons[l.id];
+  const state = lessonState(d, l, nextId);
+  const keys = [...new Set(l.newKeys)];
+  const prev = LESSONS[LESSONS.indexOf(l) - 1];
+  const foot = rec ? `<span class="ln-l-best">${Math.round(rec.wpm)} wpm · ${Math.round(rec.acc)}%</span>`
+    : state === 'current' ? `<span class="ln-l-best go">${icon('play', 12)}start here</span>`
+    : state === 'locked' && prev ? `<span class="ln-l-best lock">${icon('lock', 11)}pass ${lessonNo(prev)} to open</span>`
+    : state === 'open' ? `<span class="ln-l-best">${icon('play', 11)}open</span>` : '';
+  return `<button class="ln-lesson ${state}" data-lesson="${l.id}" ${state === 'locked' ? 'aria-disabled="true"' : ''} title="${esc(l.summary)}" style="--i:${j}">
+        <span class="ln-l-top"><span class="ln-l-n">${lessonNo(l)}</span>${state === 'locked' ? `<span class="ln-lock" aria-label="locked">${icon('lock', 14)}</span>` : stars(rec?.stars ?? 0)}</span>
+        ${keys.length ? `<span class="ln-l-keys">${keys.slice(0, 5).map(k => keycap(k)).join('')}${keys.length > 5 ? `<span class="ln-kc more">+${keys.length - 5}</span>` : ''}</span>`
+          : `<span class="ln-l-bn bn">${esc(l.bn)}</span>`}
+        <span class="ln-l-title">${esc(l.title)}</span>
+        ${foot}
+      </button>`;
+}
+
 function unitPanel(d: LearnData, n: number, nextId: string): string {
   const u = UNITS.find(x => x.n === n)!;
   const ls = lessonsInUnit(n);
@@ -36,27 +73,47 @@ function unitPanel(d: LearnData, n: number, nextId: string): string {
       <div><h2>${esc(u.title)} <span class="bn">${esc(u.bn)}</span></h2><p>${esc(u.summary)}</p></div>
       <div class="ln-unit-prog"><span>${ud}/${ls.length} done</span><i style="--p:${(ud / ls.length) * 100}%"></i></div>
     </header>
-    <div class="ln-lessons">${ls.map((l, j) => {
-      const i = LESSONS.indexOf(l);
-      const rec = d.lessons[l.id];
-      const unlocked = isUnlocked(d, i);
-      const state = !unlocked ? 'locked' : rec?.stars ? 'done' : l.id === nextId ? 'current' : '';
-      return `<button class="ln-lesson ${state}" data-lesson="${l.id}" ${unlocked ? '' : 'aria-disabled="true"'} title="${esc(l.summary)}" style="--i:${j}">
-        <span class="ln-l-top"><span class="ln-l-n">${n}.${j + 1}</span>${unlocked ? stars(rec?.stars ?? 0) : `<span class="ln-lock">${icon('shield', 14)}</span>`}</span>
-        <span class="ln-l-bn bn">${esc(l.bn)}</span>
-        <span class="ln-l-title">${esc(l.title)}</span>
-        ${rec ? `<span class="ln-l-best">${Math.round(rec.wpm)} wpm · ${Math.round(rec.acc)}%</span>` : state === 'current' ? `<span class="ln-l-best go">${icon('play', 12)}start here</span>` : ''}
-      </button>`;
-    }).join('')}</div>
-    ${unitKeys(n)}`;
+    <div class="ln-lessons" data-count="${ls.length}">${ls.map((l, j) => lessonCard(d, l, j, nextId)).join('')}</div>
+    ${unitBoard(n)}`;
 }
 
-/** The keys a unit teaches, as little keycaps with their Bangla letters. */
-function unitKeys(n: number): string {
-  const keys = [...new Set(lessonsInUnit(n).flatMap(l => [...l.newKeys]))];
+// the keyboard rows, by physical key (unshifted)
+const BOARD_ROWS = ['1234567890', 'qwertyuiop', "asdfghjkl;'", 'zxcvbnm,./'];
+
+/** The rows of the keyboard this unit uses, with its keys lit in their finger's colour. */
+function unitBoard(n: number): string {
+  const keys = [...new Set(lessonsInUnit(n).flatMap(l => [...l.newKeys]))].filter(k => k !== ' ');
   if (!keys.length) return '';
-  return `<div class="ln-unit-keys"><span class="label">${icon('keyboard', 14)}keys in this unit</span><div class="ln-ukeys">${keys.map(k =>
-    `<span class="ln-ukey" title="${esc(physicalKey(k).toUpperCase())}${/[A-Z~!@#$%^&*()_+{}|:"<>?]/.test(k) ? ' with Shift' : ''}"><b class="bn">${esc(showChar(keyText(k)))}</b><i>${/[A-Z~!@#$%^&*()_+{}|:"<>?]/.test(k) ? '⇧' : ''}${esc(physicalKey(k).toUpperCase())}</i></span>`).join('')}</div></div>`;
+  const on = new Map<string, string[]>();
+  for (const k of keys) { const p = physicalKey(k); on.set(p, [...(on.get(p) ?? []), k]); }
+  const rows = BOARD_ROWS.filter(row => [...row].some(p => on.has(p)));
+  return `<div class="ln-board" aria-label="Keys this unit teaches, coloured by finger">
+      <span class="label">${icon('keyboard', 14)}keys in this unit <em>· colour shows the finger</em></span>
+      ${rows.map(row => `<div class="ln-board-row">${[...row].map(p => {
+        const ks = on.get(p);
+        if (!ks) return `<span class="ln-bk off"><i>${esc(p.toUpperCase())}</i></span>`;
+        const lo = ks.find(k => !needsShift(k)), hi = ks.find(k => needsShift(k));
+        return `<span class="ln-bk z-${fingerFor(p)}" title="${esc(p.toUpperCase())} · ${FINGER_NAME[fingerFor(p)]}">${hi ? `<small class="bn">${esc(showChar(keyText(hi)))}</small>` : ''}<b class="bn">${lo ? esc(showChar(keyText(lo))) : ''}</b><i>${esc(p.toUpperCase())}</i></span>`;
+      }).join('')}</div>`).join('')}
+    </div>`;
+}
+
+function tabsHtml(d: LearnData, nextId: string, nextUnit: number): string {
+  return UNITS.map(u => {
+    const ls = lessonsInUnit(u.n), ud = unitDone(d, u.n);
+    const open = ls.some(l => isUnlocked(d, LESSONS.indexOf(l)));
+    const badge = ud === ls.length ? icon('check', 14) : open ? String(u.n) : icon('lock', 13);
+    return `<button role="tab" class="ln-tab ${u.n === shownUnit ? 'active' : ''} ${ud === ls.length ? 'done' : ''} ${open ? '' : 'locked'} ${u.n === nextUnit ? 'here' : ''}" data-unit="${u.n}" aria-selected="${u.n === shownUnit}" title="Unit ${u.n}: ${esc(u.title)} · ${esc(u.bn)}${open ? '' : ' (locked)'}">
+            <span class="ln-tab-n">${badge}</span><span class="ln-tab-t">${unitLabel(u.short)}</span>
+            <span class="ln-tab-dots" aria-label="${ud} of ${ls.length} lessons done">${ls.map(l => `<i class="${lessonState(d, l, nextId)}"></i>`).join('')}</span>
+          </button>`;
+  }).join('');
+}
+
+/** All 23 lessons in one strip, grouped by unit: done, the next one, open, locked. */
+function coursePath(d: LearnData, nextId: string): string {
+  return `<div class="ln-path" aria-label="Course path">${UNITS.map(u => `<span class="ln-path-unit" data-unit="${u.n}" title="Unit ${u.n}: ${esc(u.title)}">${lessonsInUnit(u.n).map(l =>
+    `<i class="${lessonState(d, l, nextId)}" title="${lessonNo(l)} ${esc(l.title)}"></i>`).join('')}</span>`).join('')}</div>`;
 }
 
 const HOW = `
@@ -104,8 +161,9 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
           <h1>Type Bangla <span>without looking</span> <span class="ln-bn">বিজয়ে না দেখে টাইপ</span></h1>
           <div class="ln-cta">
             <button class="btn primary ln-go" data-start="${next.id}">${icon('play', 16)}${started ? 'continue' : 'start the course'}</button>
-            <span class="ln-next">${started ? 'next up: ' : 'lesson 1: '}<b>${esc(next.title)}</b> <span class="bn">${esc(next.bn)}</span><small>unit ${next.unit} · lesson ${nextI + 1} of ${total}</small></span>
+            <span class="ln-next">${started ? 'next up: ' : 'lesson 1: '}<b>${esc(next.title)}</b>${[...next.bn.replace(/\s/g, '')].every(c => next.title.includes(c)) ? '' : ` <span class="bn">${esc(next.bn)}</span>`}<small>unit ${next.unit} · lesson ${nextI + 1} of ${total}</small></span>
           </div>
+          ${coursePath(d, next.id)}
         </div>
         <div class="ln-stats">
           <div class="ln-stat">${icon('check', 17)}<b>${done}<small>/${total}</small></b><span>lessons</span></div>
@@ -116,13 +174,7 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
       </section>
 
       <section class="ln-map" aria-label="Course map">
-        <div class="ln-tabs" role="tablist">${UNITS.map(u => {
-          const n = lessonsInUnit(u.n).length, ud = unitDone(d, u.n);
-          const open = lessonsInUnit(u.n).some(l => isUnlocked(d, LESSONS.indexOf(l)));
-          return `<button role="tab" class="ln-tab ${u.n === shownUnit ? 'active' : ''} ${ud === n ? 'done' : ''} ${open ? '' : 'locked'} ${u.n === next.unit ? 'here' : ''}" data-unit="${u.n}" aria-selected="${u.n === shownUnit}" title="${esc(u.title)}">
-            <span class="ln-tab-n">${ud === n ? icon('check', 14) : u.n}</span><span class="ln-tab-t">${esc(u.short)}</span><i style="--p:${(ud / n) * 100}%"></i>
-          </button>`;
-        }).join('')}</div>
+        <div class="ln-tabs" role="tablist">${tabsHtml(d, next.id, next.unit)}</div>
         <div class="ln-panel" role="tabpanel">${unitPanel(d, shownUnit!, next.id)}</div>
       </section>
 
@@ -150,7 +202,9 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
           <div class="ln-weak">
             ${weak.length ? `${weak.slice(0, 4).map(k => `<span class="chip"><b class="bn">${esc(showChar(keyText(k)))}</b><i>${esc(physicalKey(k).toUpperCase())}</i><em>${Math.round((keyAccuracy(d, k, 1) ?? 0) * 100)}%</em></span>`).join('')}
               <button class="btn primary" data-weak="${esc(weak.join(''))}">${icon('target', 15)}practise</button>`
-              : `<p class="ln-weak-none">${started ? 'No weak keys: every key you have practised is above 97%.' : 'Your weakest keys show up here after a lesson or two, with a drill made for them.'}</p>`}
+              : Object.keys(d.keys).length ? `<p class="ln-weak-none">${icon('check', 14)}No weak keys: every key you have practised is above 97%.</p>`
+              : `<div class="ln-mastery-empty"><p>Every key lights up here as you practise: red needs work, green is mastered. Your weakest keys get a drill made just for them.</p>
+                  <button class="btn" data-start="${next.id}">${icon('play', 14)}${started ? 'continue' : 'start lesson 1'}</button></div>`}
           </div>
         </section>
       </aside>
@@ -187,7 +241,11 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
     const tab = t.closest<HTMLElement>('[data-unit]');
     if (tab) {
       shownUnit = Number(tab.dataset.unit);
-      el.querySelectorAll('.ln-tab').forEach(x => { x.classList.toggle('active', x === tab); x.setAttribute('aria-selected', String(x === tab)); });
+      el.querySelectorAll<HTMLElement>('.ln-tab').forEach(x => {
+        const sel = Number(x.dataset.unit) === shownUnit;
+        x.classList.toggle('active', sel);
+        x.setAttribute('aria-selected', String(sel));
+      });
       const panel = el.querySelector<HTMLElement>('.ln-panel')!;
       panel.innerHTML = unitPanel(d, shownUnit, next.id);
       panel.classList.remove('enter'); void panel.offsetWidth; panel.classList.add('enter');
@@ -231,10 +289,10 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
     const was = new Set([...el.querySelectorAll<HTMLElement>('.ln-lesson[aria-disabled="true"]')].map(b => b.dataset.lesson));
     window.setTimeout(() => {
       if (!el.isConnected || d.openAll !== on) return;
-      el.querySelectorAll<HTMLElement>('.ln-tab').forEach(tab => {
-        const u = Number(tab.dataset.unit);
-        tab.classList.toggle('locked', !lessonsInUnit(u).some(l => isUnlocked(d, LESSONS.indexOf(l))));
-      });
+      // tabs (lock badges, progress dots) and the course path follow the new state
+      el.querySelector('.ln-tabs')!.innerHTML = tabsHtml(d, next.id, next.unit);
+      const path = el.querySelector('.ln-path');
+      if (path) path.outerHTML = coursePath(d, next.id);
       const panel = el.querySelector<HTMLElement>('.ln-panel')!;
       const top = panel.scrollTop;
       panel.innerHTML = unitPanel(d, shownUnit!, next.id);

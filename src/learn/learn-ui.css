@@ -1,0 +1,113 @@
+/* Course page: clearer unit tabs, lesson cards that show their keys and fingers,
+   the unit's keys on a keyboard, a course path in the hero, and better empty states.
+   Loaded after style.css (imported from learn/page.ts). */
+
+/* ---------- unit tabs: a badge (number, tick or lock), a label and one dot per lesson ---------- */
+.ln-tab { gap: 5px; padding-bottom: 8px; }
+.ln-tab.locked { opacity: 1; color: color-mix(in srgb, var(--sub) 80%, transparent); }
+.ln-tab.locked .ln-tab-n { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); }
+.ln-tab.locked:hover { color: var(--sub); }
+.ln-tab-n .icon { display: block; }
+.ln-tab-t small { display: block; margin-top: 1px; font-size: 10px; line-height: 1.1; opacity: .8; }
+.ln-tab:has(.ln-tab-t small) .ln-tab-t { line-height: 1.15; }
+.ln-tab .ln-tab-dots { display: flex; gap: 3px; justify-content: center; }
+.ln-tab .ln-tab-dots i {
+  position: static; display: block; width: 6px; height: 6px; border-radius: 50%;
+  background: color-mix(in srgb, var(--sub) 30%, transparent); transition: background .3s var(--ease), transform .3s var(--spring);
+}
+.ln-tab .ln-tab-dots i.done { background: var(--main); }
+.ln-tab .ln-tab-dots i.current { background: transparent; box-shadow: inset 0 0 0 1.5px var(--main); transform: scale(1.15); }
+.ln-tab .ln-tab-dots i.locked { background: color-mix(in srgb, var(--sub) 14%, transparent); }
+
+/* ---------- the course path in the hero: 23 lessons, grouped by unit ---------- */
+.ln-path { display: flex; flex-wrap: wrap; gap: 8px; margin-top: clamp(8px, 1.4dvh, 14px); }
+.ln-path-unit { display: flex; gap: 3px; padding: 3px; border-radius: 7px; cursor: pointer; transition: background var(--fast); }
+.ln-path-unit:hover { background: var(--tint); }
+.ln-path-unit i { display: block; width: 14px; height: 7px; border-radius: 4px; background: color-mix(in srgb, var(--sub) 26%, transparent); }
+.ln-path-unit i.done { background: var(--main); }
+.ln-path-unit i.current { background: transparent; box-shadow: inset 0 0 0 1.5px var(--main); animation: path-blink 1.6s ease-in-out infinite; }
+.ln-path-unit i.locked { background: color-mix(in srgb, var(--sub) 12%, transparent); }
+@keyframes path-blink { 50% { background: var(--tint-strong); } }
+
+/* ---------- lesson cards ---------- */
+.ln-panel { container-type: inline-size; }
+.ln-dash .ln-lessons, .ln-lessons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container (min-width: 520px) {
+  .ln-lessons[data-count="3"], .ln-lessons[data-count="5"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ln-lessons[data-count="1"] { grid-template-columns: minmax(0, 320px); }
+}
+@container (min-width: 600px) {
+  .ln-lessons[data-count="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@container (min-width: 860px) {
+  .ln-lessons[data-count="5"] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+.ln-lesson { gap: 6px; justify-content: flex-start; }
+.ln-lesson.locked { opacity: .72; }
+.ln-lesson.locked .ln-l-keys { filter: saturate(.35); }
+.ln-l-keys { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.ln-l-best { margin-top: auto; padding-top: 2px; display: inline-flex; align-items: center; gap: 5px; }
+.ln-l-best.lock { color: var(--sub); font-family: var(--font-ui); font-size: 12px; }
+.ln-lock { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; background: var(--sub-alt); }
+
+/* a key as a keycap, in its finger's colour */
+.ln-kc {
+  --zone: var(--sub);
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 30px; height: 34px; padding: 0 5px;
+  border-radius: 8px; background: color-mix(in srgb, var(--zone) 16%, var(--sub-alt));
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--zone) 70%, transparent);
+  line-height: 1;
+}
+.ln-kc b { font-size: 16px; font-weight: 500; color: var(--text); }
+.ln-kc i { margin-top: 3px; font: 600 9px var(--font-mono); font-style: normal; color: color-mix(in srgb, var(--zone) 85%, var(--text)); }
+.ln-kc.more { color: var(--sub); font: 600 12px var(--font-mono); }
+.ln-kc.z-lp, .ln-bk.z-lp { --zone: var(--z-lp); } .ln-kc.z-lr, .ln-bk.z-lr { --zone: var(--z-lr); }
+.ln-kc.z-lm, .ln-bk.z-lm { --zone: var(--z-lm); } .ln-kc.z-li, .ln-bk.z-li { --zone: var(--z-li); }
+.ln-kc.z-ri, .ln-bk.z-ri { --zone: var(--z-ri); } .ln-kc.z-rm, .ln-bk.z-rm { --zone: var(--z-rm); }
+.ln-kc.z-rr, .ln-bk.z-rr { --zone: var(--z-rr); } .ln-kc.z-rp, .ln-bk.z-rp { --zone: var(--z-rp); }
+.ln-kc.z-th, .ln-bk.z-th { --zone: var(--z-th); }
+
+/* ---------- the unit's keys on the keyboard rows they use ---------- */
+.ln-board { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding-top: 6px; }
+.ln-board .label { display: flex; align-items: center; gap: 6px; color: var(--sub); font-size: 12.5px; }
+.ln-board .label em { font-style: normal; opacity: .75; }
+.ln-board-row { display: flex; gap: 5px; }
+.ln-bk {
+  --zone: var(--sub);
+  position: relative; flex: 1 1 0; min-width: 0; max-width: 64px; height: clamp(34px, 6.5dvh, 58px); border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+  background: color-mix(in srgb, var(--zone) 20%, var(--bg)); box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--zone) 75%, transparent);
+}
+.ln-bk b { font-size: clamp(14px, 2.4dvh, 21px); font-weight: 500; color: var(--text); }
+.ln-bk small { position: absolute; top: 3px; right: 5px; font-size: 10px; color: color-mix(in srgb, var(--text) 70%, transparent); }
+.ln-bk i { position: absolute; bottom: 5px; left: 5px; font: 600 8.5px var(--font-mono); font-style: normal; color: color-mix(in srgb, var(--zone) 80%, var(--text)); }
+.ln-bk.off { background: color-mix(in srgb, var(--sub) 8%, transparent); box-shadow: none; }
+.ln-bk.off i { position: static; color: color-mix(in srgb, var(--sub) 55%, transparent); }
+
+/* ---------- key mastery: heat map in the middle, an invitation before any practice ---------- */
+.ln-dash .ln-heat { margin-block: auto; }
+.ln-mastery-empty { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--bg); }
+.ln-mastery-empty p { margin: 0; flex: 1; color: var(--sub); font-size: 13px; line-height: 1.5; }
+.ln-mastery-empty .btn { flex: none; }
+.ln-weak-none { display: flex; align-items: center; gap: 6px; }
+.ln-weak-none .icon { color: var(--main); }
+
+/* ---------- narrow screens ---------- */
+@media (max-width: 999px), (max-height: 559px) {
+  .ln-tab { min-width: 92px; }
+  .ln-board { margin-top: 4px; }
+}
+@media (max-width: 700px) {
+  /* room at the bottom so the floating corner buttons never sit on the last card */
+  body[data-view="learn"] .learn:not(.playing) { padding-bottom: 76px; }
+  .ln-path { gap: 6px; }
+  .ln-path-unit i { width: 11px; }
+  .ln-mastery-empty { flex-direction: column; align-items: stretch; }
+  .ln-mastery-empty .btn { justify-content: center; }
+  .ln-bk { height: 38px; }
+  .ln-bk i { display: none; }
+  .ln-bk.off i { display: block; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ln-path-unit i.current { animation: none; }
+}
