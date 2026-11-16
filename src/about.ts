@@ -47,7 +47,7 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
       <div class="ab-hero-main">
         ${logo('ab-logo')}
         <div class="ab-hero-text">
-          <span class="ab-eyebrow">${icon('info', 14)}about</span>
+          <span class="ab-eyebrow">${icon('info', 14)}about<span class="ab-formerly">formerly Jolpai Type</span></span>
           <h1>Jolpai Typing <span class="ab-bn">জলপাই টাইপিং</span></h1>
           <p class="ab-tag">Practise <b>Bangla (Bijoy)</b> and <b>English</b> typing in a clean, calm place, and learn Bijoy touch typing from the very first key. Free.</p>
           <div class="ab-cta">
@@ -76,6 +76,8 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
         <p>Jolpai Typing gives Bangla typing a <b>good environment</b>: a clean, distraction-free typing test with a better design,
           and a course that teaches <b>Bijoy</b> touch typing step by step. English is here too.</p>
       </div>
+      <p class="ab-name">${icon('lessons', 16)}<span><b>Why “Jolpai”?</b> জলপাই means olive in Bangla: the colour of the site, and the name it shares
+        with Jolpai Keyboard. Until November 2026 the site was called Jolpai Type; old links still bring you here.</span></p>
     </section>
 
     <section class="ab-section" data-reveal>
@@ -112,7 +114,7 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
 
       <section class="ab-card ab-repo">
         <h2><span class="ab-h-ico">${GITHUB}</span>open source</h2>
-        <p>Jolpai Typing is free and open source. If it helps you practise, please <b>give it a star on GitHub</b>: it helps other
+        <p>Jolpai Typing is free and open source under the <a class="ab-inline" href="${REPO_URL}/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>. If it helps you practise, please <b>give it a star on GitHub</b>: it helps other
           Bangla typists find it.</p>
         <div class="ab-stats" aria-live="polite">
           <span class="ab-stat">${STAR}<b id="ab-stars">–</b> stars</span>

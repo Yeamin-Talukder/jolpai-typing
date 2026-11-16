@@ -2265,3 +2265,10 @@ body[data-view="learn"] main { padding-top: 0; }
 @media (max-width: 360px) {
   .brand-text { font-size: 15px; }
 }
+
+/* About: the rename note and the name */
+.ab-formerly { margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--line); color: var(--sub); text-transform: none; letter-spacing: 0; }
+.ab-name { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--bg); font-size: 14.5px !important; }
+.ab-name .icon { flex: none; margin-top: 4px; color: var(--main); }
+.ab-name b { color: var(--text); }
+.ab-inline { color: var(--main); text-underline-offset: 3px; }
