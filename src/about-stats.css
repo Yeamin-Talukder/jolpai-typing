@@ -1,0 +1,48 @@
+/* About page: the live site-wide totals */
+.ab-live { display: flex; flex-direction: column; gap: 14px; }
+.ab-live .ab-title { flex-wrap: wrap; }
+.ab-live-tag {
+  display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; padding: 3px 10px; border-radius: 999px;
+  background: var(--tint); color: var(--main); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em;
+}
+.ab-live-tag i { width: 7px; height: 7px; border-radius: 50%; background: var(--main); animation: ab-live-pulse 1.8s ease-in-out infinite; }
+@keyframes ab-live-pulse { 0%, 100% { box-shadow: 0 0 0 0 var(--tint-strong); } 50% { box-shadow: 0 0 0 5px transparent; } }
+.ab-live.off .ab-live-tag { background: var(--sub-alt); color: var(--sub); }
+.ab-live.off .ab-live-tag i { background: var(--sub); animation: none; }
+
+.ab-live-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.ab-live-card {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 2px; padding: 18px 20px; border-radius: 18px;
+  background: var(--sub-alt); transition: transform .35s var(--spring), box-shadow var(--fast);
+}
+.ab-live-card::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: radial-gradient(70% 90% at 100% 0%, var(--tint), transparent 65%); transition: opacity var(--med);
+}
+.ab-live-card:hover { transform: translateY(-3px); box-shadow: inset 0 0 0 1.5px var(--tint-strong); }
+.ab-live-card:hover::after { opacity: 1; }
+.ab-live-ico {
+  display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 8px; border-radius: 12px; background: var(--tint); color: var(--main);
+  transition: transform .4s var(--spring), background var(--fast), color var(--fast);
+}
+.ab-live-card:hover .ab-live-ico { transform: rotate(-8deg) scale(1.08); background: var(--main); color: var(--bg); }
+.ab-live-card b { font: 700 34px/1.1 var(--font-mono); color: var(--text); }
+.ab-live:not(.loaded):not(.off) .ab-live-card b { color: var(--sub); animation: ab-live-wait 1.2s ease-in-out infinite; }
+@keyframes ab-live-wait { 50% { opacity: .4; } }
+.ab-live-card span { color: var(--text); font-size: 15px; }
+.ab-live-card small { color: var(--sub); font-size: 12.5px; }
+.ab-live-note { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--sub); font-size: 13px; }
+.ab-live-note .icon { flex: none; color: var(--main); }
+
+.ab-live.in .ab-live-card { animation: rise .5s var(--ease) both; animation-delay: calc(var(--i) * 60ms); }
+.ab-live.in .ab-live-card:hover { animation: none; }
+
+@media (max-width: 900px) { .ab-live-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) {
+  .ab-live-grid { gap: 8px; }
+  .ab-live-card { padding: 14px; }
+  .ab-live-card b { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ab-live-tag i, .ab-live.in .ab-live-card, .ab-live:not(.loaded):not(.off) .ab-live-card b { animation: none; }
+}

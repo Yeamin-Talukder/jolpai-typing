@@ -15,7 +15,7 @@ import { renderSpeedChart } from './chart';
 import { addExtras } from './extras';
 import { deviceKind, deviceOf, type Device } from './device';
 import { askAmount, askText, customAmount, customText, setCustomAmount, typeableWords, TEXT_LIMITS, type AmountMode } from './custom';
-import { accountsEnabled, clearAccountHistory, currentShareId, currentUser, initAccount, loadShared, onLearnChange, resetLearnEverywhere, saveLearnToAccount, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
+import { accountsEnabled, clearAccountHistory, countLesson, countTest, currentShareId, currentUser, initAccount, loadShared, onLearnChange, resetLearnEverywhere, saveLearnToAccount, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
 import { SharePanel } from './share';
 import { renderAbout } from './about';
 import { Learn } from './learn';
@@ -775,6 +775,7 @@ function finish() {
     };
     const { previousBest } = addEntry(entry);
     saveToAccount(entry);
+    countTest(settings.lang, sec);
     if (previousBest !== null && Math.round(wpm) > Math.round(previousBest)) {
       $('r-pb-text').textContent = `new personal best · was ${Math.round(previousBest)}`;
       pb.hidden = false;
@@ -998,7 +999,7 @@ const learn = new Learn(learnEl, {
   prefs,
   onLeave: () => showView('test'),
   signedIn: () => !!currentUser(),
-  onProgress: p => saveLearnToAccount(p),
+  onProgress: p => { saveLearnToAccount(p); if (p.run) countLesson(p.run.secs); },
   onReset: () => resetLearnEverywhere(),
   onExamDone: (rec, s, setup) => {
     // a mock exam is a passage test too: it joins the history and the profile
@@ -1009,6 +1010,7 @@ const learn = new Learn(learnEl, {
     };
     addEntry(entry);
     saveToAccount(entry);
+    countTest(rec.lang, rec.secs);
   },
 });
 onLearnChange(() => learn.refresh());

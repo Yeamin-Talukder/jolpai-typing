@@ -35,6 +35,47 @@ service cloud.firestore {
         && d.updated is timestamp;
     }
 
+    // Site-wide numbers for the About page: one public document, stats/site.
+    // Anyone may read it. Anyone (guests too) may add exactly one finished
+    // test or one finished course lesson, with a realistic length; a signed-in
+    // person may add themselves once, in the same write that creates their
+    // profile. Every other counter must stay the same.
+    function step(k) {
+      return request.resource.data[k] - (resource == null ? 0 : resource.data[k]);
+    }
+    function statsShape(d) {
+      return d.keys().hasOnly(['tests', 'bangla', 'english', 'lessons', 'seconds', 'typists', 'accounts'])
+        && d.keys().hasAll(['tests', 'bangla', 'english', 'lessons', 'seconds', 'typists', 'accounts'])
+        && d.tests is int && d.bangla is int && d.english is int && d.lessons is int
+        && d.typists is int && d.accounts is int && (d.seconds is int || d.seconds is float);
+    }
+    function oneTest() {
+      return step('tests') == 1 && step('bangla') + step('english') == 1 && step('bangla') >= 0 && step('english') >= 0
+        && step('lessons') == 0 && step('accounts') == 0
+        && step('seconds') >= 5 && step('seconds') <= 3600
+        && step('typists') >= 0 && step('typists') <= 1;
+    }
+    function oneLesson() {
+      return step('lessons') == 1 && step('tests') == 0 && step('bangla') == 0 && step('english') == 0 && step('accounts') == 0
+        && step('seconds') > 0 && step('seconds') <= 3600
+        && step('typists') >= 0 && step('typists') <= 1;
+    }
+    function oneAccount() {
+      return step('accounts') == 1
+        && step('tests') == 0 && step('bangla') == 0 && step('english') == 0 && step('lessons') == 0
+        && step('seconds') == 0 && step('typists') == 0
+        && request.auth != null
+        && !exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && existsAfter(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    match /stats/{doc} {
+      allow get: if doc == 'site';
+      allow list, delete: if false;
+      allow create, update: if doc == 'site' && statsShape(request.resource.data)
+        && (oneTest() || oneLesson() || oneAccount());
+    }
+
     match /shared/{shareId} {
       allow get: if true;
       allow list: if false;

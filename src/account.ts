@@ -88,7 +88,20 @@ async function syncHistory() {
   const profileRef = f.doc(db, 'users', u.uid);
   const profile = await f.getDoc(profileRef);
   shareId = (profile.data()?.shareId as string | null | undefined) ?? null;
-  await f.setDoc(profileRef, { name: u.name, lastSeen: f.serverTimestamp() }, { merge: true });
+  const me = { name: u.name, lastSeen: f.serverTimestamp() };
+  if (!profile.exists()) {
+    // a new account: create the profile and add it to the site total in one write
+    try {
+      const batch = f.writeBatch(db);
+      batch.set(profileRef, me, { merge: true });
+      batch.set(f.doc(db, 'stats', 'site'), statsStep(f, { accounts: 1 }), { merge: true });
+      await batch.commit();
+    } catch {
+      await f.setDoc(profileRef, me, { merge: true }); // never let the count stop a sign-in
+    }
+  } else {
+    await f.setDoc(profileRef, me, { merge: true });
+  }
   replaceHistory(merged);
   setOwner(u.uid);
   if (shareId) publishShare(); // name, photo or results may have changed
@@ -312,4 +325,56 @@ export async function clearAccountHistory() {
     await batch.commit();
   }
   if (shareId) publishShare(); // the shared copy empties too
+}
+
+// ---------- site-wide numbers (the About page) ----------
+// One public document, stats/site. Every finished test or course lesson adds
+// one step, guests included; the rules allow only one realistic step at a time.
+
+export type StatKey = 'tests' | 'bangla' | 'english' | 'lessons' | 'seconds' | 'typists' | 'accounts';
+export type SiteStats = Record<StatKey, number>;
+const STAT_KEYS: StatKey[] = ['tests', 'bangla', 'english', 'lessons', 'seconds', 'typists', 'accounts'];
+const COUNTED_KEY = 'jolpai-type:counted'; // this browser has been counted as a typist
+
+/** Every counter in one write, the unchanged ones as +0, so a first write creates them all. */
+function statsStep(f: FsMod, add: Partial<SiteStats>) {
+  return Object.fromEntries(STAT_KEYS.map(k => [k, f.increment(add[k] ?? 0)]));
+}
+
+let counting: Promise<void> = Promise.resolve();
+function count(add: Partial<SiteStats>) {
+  if (!accountsEnabled()) return;
+  counting = counting.then(async () => {
+    const { db, f } = await load();
+    let first = 0;
+    try { first = localStorage.getItem(COUNTED_KEY) ? 0 : 1; } catch { /* private mode: never counted as new */ }
+    await f.setDoc(f.doc(db, 'stats', 'site'), statsStep(f, { ...add, typists: first }), { merge: true });
+    if (first) try { localStorage.setItem(COUNTED_KEY, '1'); } catch { /* ignore */ }
+  }).catch(err => console.warn('Could not add this to the site totals', err));
+}
+
+/** A finished typing test or mock exam (5 seconds or longer). */
+export function countTest(lang: 'bangla' | 'english', secs: number) {
+  const s = Math.round(Math.min(3600, secs));
+  if (s >= 5) count({ tests: 1, [lang]: 1, seconds: s });
+}
+
+/** A finished course lesson. */
+export function countLesson(secs: number) {
+  count({ lessons: 1, seconds: Math.round(Math.min(3600, Math.max(1, secs))) });
+}
+
+/** The site totals, or null when they cannot be loaded (offline, or none yet). */
+export async function loadSiteStats(): Promise<SiteStats | null> {
+  if (!accountsEnabled()) return null;
+  try {
+    const { db, f } = await load();
+    const snap = await f.getDoc(f.doc(db, 'stats', 'site'));
+    if (!snap.exists()) return null;
+    const d = snap.data();
+    return Object.fromEntries(STAT_KEYS.map(k => [k, Number(d[k]) || 0])) as SiteStats;
+  } catch (err) {
+    console.warn('Could not load the site totals', err);
+    return null;
+  }
 }

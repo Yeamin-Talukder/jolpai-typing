@@ -1,7 +1,9 @@
 // The About page: why Jolpai Typing exists, what it can do, who made it, and
 // where the code lives. Numbers on the page come from the code itself, so
 // they stay right as the site grows.
+import { loadSiteStats, type SiteStats } from './account';
 import { unicodeToSegments } from './bijoy';
+import './about-stats.css';
 import { countUp, icon, logo, type IconName } from './icons';
 import { LESSONS, UNITS } from './learn/course';
 import { THEMES } from './themes';
@@ -66,6 +68,15 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
     <section class="ab-nums" data-reveal>
       ${nums.map(([ic, n, label], i) => `<div class="ab-num" style="--i:${i}">${icon(ic, 18)}<b data-count="${n}">${n}</b><span>${label}</span></div>`).join('')}
       <div class="ab-num" style="--i:4">${icon('check', 18)}<b>free</b><span>no sign-up needed</span></div>
+    </section>
+
+    <section class="ab-live" data-reveal aria-live="polite">
+      <h2 class="ab-title"><span class="ab-h-ico">${icon('trend', 18)}</span>Jolpai Typing in numbers<span class="ab-live-tag"><i></i>live</span></h2>
+      <div class="ab-live-grid">
+        ${LIVE.map(([k, ic, label, sub], i) => `<div class="ab-live-card" style="--i:${i}" data-live="${k}">
+          <span class="ab-live-ico">${icon(ic, 20)}</span><b>–</b><span>${label}</span><small>${sub}</small></div>`).join('')}
+      </div>
+      <p class="ab-live-note">${icon('info', 14)}<span>Counted on this site since 16 November 2026, guests included. Every finished test and lesson adds to it.</span></p>
     </section>
 
     <section class="ab-card ab-why" data-reveal>
@@ -138,9 +149,40 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
   reveal(el);
   typeDemo(el);
   loadRepoStats(el);
+  loadLive(el);
 }
 
 const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** The site-wide totals: [key, icon, label, small print]. */
+const LIVE: [string, IconName, string, string][] = [
+  ['tests', 'keyboard', 'tests taken', 'typing tests and mock exams'],
+  ['typists', 'user', 'people typing', 'browsers that finished a test'],
+  ['time', 'clock', 'time spent typing', 'tests and lessons together'],
+  ['bangla', 'globe', 'tests in Bangla', 'the rest in English'],
+  ['lessons', 'lessons', 'course lessons finished', 'in the Bijoy course'],
+  ['accounts', 'cloud', 'Google accounts', 'people who signed in'],
+];
+
+/** Fill in the totals once they arrive; count up if the section is already on screen. */
+async function loadLive(el: HTMLElement) {
+  const s: SiteStats | null = await loadSiteStats();
+  const box = el.querySelector<HTMLElement>('.ab-live');
+  if (!box || !el.isConnected) return;
+  if (!s) { box.classList.add('off'); box.querySelector('.ab-live-note span')!.textContent = 'The site totals cannot be loaded right now. Try again later.'; return; }
+  const hours = s.seconds / 3600;
+  const values: Record<string, [number, string]> = {
+    tests: [s.tests, ''], typists: [s.typists, ''], lessons: [s.lessons, ''], accounts: [s.accounts, ''],
+    time: hours >= 1 ? [Math.round(hours), 'h'] : s.seconds >= 60 ? [Math.round(s.seconds / 60), 'm'] : [Math.round(s.seconds), 's'],
+    bangla: [s.tests ? Math.round((s.bangla / s.tests) * 100) : 0, '%'],
+  };
+  for (const [k, [n, suffix]] of Object.entries(values)) {
+    const b = box.querySelector<HTMLElement>(`[data-live="${k}"] b`);
+    if (!b) continue;
+    if (box.classList.contains('in') || still()) countUp(b, n, suffix, 1000); else { b.dataset.count = String(n); b.dataset.suffix = suffix; b.textContent = `${n}${suffix}`; }
+  }
+  box.classList.add('loaded');
+}
 
 /** Sections slide in as they scroll into view; numbers count up. */
 function reveal(el: HTMLElement) {
@@ -151,7 +193,7 @@ function reveal(el: HTMLElement) {
       if (!en.isIntersecting) continue;
       const p = en.target as HTMLElement;
       p.classList.add('in');
-      p.querySelectorAll<HTMLElement>('[data-count]').forEach(n => countUp(n, Number(n.dataset.count), '', 900));
+      p.querySelectorAll<HTMLElement>('[data-count]').forEach(n => countUp(n, Number(n.dataset.count), n.dataset.suffix || '', 900));
       io.unobserve(p);
     }
   }, { threshold: 0.15 });

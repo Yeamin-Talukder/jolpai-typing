@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, deleteDoc, updateDoc, increment, writeBatch, type Firestore } from 'firebase/firestore';
 
 let env: RulesTestEnvironment;
 
@@ -147,5 +147,64 @@ describe('shared profiles', () => {
     const db = env.authenticatedContext('alice').firestore();
     await assertSucceeds(setDoc(doc(db, 'users/alice'), { name: 'Alice', lastSeen: serverTimestamp(), shareId: 'abc' }));
     await assertSucceeds(setDoc(doc(db, 'users/alice'), { name: 'Alice', shareId: null }));
+  });
+});
+
+describe('site totals (stats/site)', () => {
+  const KEYS = ['tests', 'bangla', 'english', 'lessons', 'seconds', 'typists', 'accounts'];
+  // the same shape the site writes: every counter, unchanged ones as +0
+  const step = (add: Record<string, number>) => Object.fromEntries(KEYS.map(k => [k, increment(add[k] ?? 0)]));
+  const site = (db: Firestore) => doc(db, 'stats/site');
+  const seed = () => env.withSecurityRulesDisabled(c =>
+    setDoc(doc(c.firestore(), 'stats/site'), { tests: 10, bangla: 6, english: 4, lessons: 3, seconds: 900, typists: 5, accounts: 2 }));
+
+  it('anyone can read the totals, nobody can list or delete them', async () => {
+    await seed();
+    const guest = env.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(site(guest)));
+    await assertFails(getDocs(collection(guest, 'stats')));
+    await assertFails(deleteDoc(site(guest)));
+  });
+
+  it('a guest can add one finished test, and the first one creates the totals', async () => {
+    const guest = env.unauthenticatedContext().firestore();
+    await assertSucceeds(setDoc(site(guest), step({ tests: 1, bangla: 1, seconds: 30, typists: 1 }), { merge: true }));
+    await assertSucceeds(setDoc(site(guest), step({ tests: 1, english: 1, seconds: 60 }), { merge: true }));
+    await assertSucceeds(setDoc(site(guest), step({ lessons: 1, seconds: 120 }), { merge: true }));
+  });
+
+  it('refuses anything bigger than one realistic step', async () => {
+    await seed();
+    const guest = env.unauthenticatedContext().firestore();
+    await assertFails(setDoc(site(guest), step({ tests: 2, bangla: 2, seconds: 30 }), { merge: true }));
+    await assertFails(setDoc(site(guest), step({ tests: 1, bangla: 1, english: 1, seconds: 30 }), { merge: true }));
+    await assertFails(setDoc(site(guest), step({ tests: 1, bangla: 1, seconds: 4 }), { merge: true }));
+    await assertFails(setDoc(site(guest), step({ tests: 1, bangla: 1, seconds: 4000 }), { merge: true }));
+    await assertFails(setDoc(site(guest), step({ tests: 1, bangla: 1, seconds: 30, typists: 2 }), { merge: true }));
+    await assertFails(setDoc(site(guest), step({ tests: 1, bangla: 1, seconds: 30, lessons: 1 }), { merge: true }));
+    await assertFails(setDoc(site(guest), step({ tests: -1, bangla: -1, seconds: 30 }), { merge: true }));
+    await assertFails(setDoc(site(guest), step({}), { merge: true }));
+    await assertFails(setDoc(site(guest), { tests: 99999, bangla: 0, english: 0, lessons: 0, seconds: 0, typists: 0, accounts: 0 }));
+    await assertFails(setDoc(site(guest), { ...step({ tests: 1, bangla: 1, seconds: 30 }), extra: 1 }, { merge: true }));
+    await assertFails(updateDoc(doc(guest, 'stats/other'), step({ tests: 1, bangla: 1, seconds: 30 })));
+  });
+
+  it('a new account is counted once, together with creating its profile', async () => {
+    await seed();
+    const alice = env.authenticatedContext('alice').firestore();
+    const first = writeBatch(alice);
+    first.set(doc(alice, 'users/alice'), { name: 'Alice', lastSeen: serverTimestamp() }, { merge: true });
+    first.set(site(alice), step({ accounts: 1 }), { merge: true });
+    await assertSucceeds(first.commit());
+    // the profile exists now: no second count
+    const again = writeBatch(alice);
+    again.set(doc(alice, 'users/alice'), { name: 'Alice', lastSeen: serverTimestamp() }, { merge: true });
+    again.set(site(alice), step({ accounts: 1 }), { merge: true });
+    await assertFails(again.commit());
+    // not without creating a profile, and never as a guest
+    const bob = env.authenticatedContext('bob').firestore();
+    await assertFails(setDoc(site(bob), step({ accounts: 1 }), { merge: true }));
+    const guest = env.unauthenticatedContext().firestore();
+    await assertFails(setDoc(site(guest), step({ accounts: 1 }), { merge: true }));
   });
 });

@@ -1,5 +1,5 @@
 // The "share profile" panel: link, QR code, share, download and stop sharing.
-import { icon } from './icons';
+import { icon, LOGO_PATHS } from './icons';
 
 export interface ShareActions {
   signedIn(): boolean;
@@ -15,9 +15,8 @@ const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;
 /** The link that opens a shared profile. */
 export const shareLink = (id: string) => `${location.origin}${location.pathname}?p=${encodeURIComponent(id)}`;
 
-// the olive logo, drawn in the middle of the QR code
-const LOGO_BODY = 'M16 7a9 11 0 1 0 0.01 0z';
-const LOGO_LEAF = 'M16 7c2-4 6-5 9-4-1 4-5 6-9 4z';
+// the logo in the middle of the QR code: the keyboard mark in the jolpai colours
+const LOGO_GREEN = '#7f9a2c', LEAF_GREEN = '#4d5a35';
 
 type QR = { getModuleCount(): number; isDark(r: number, c: number): boolean };
 
@@ -46,7 +45,7 @@ function qrSvg(qr: QR): string {
     <rect width="${size}" height="${size}" fill="#fff"/><path d="${d}" fill="#141611"/>
     <g transform="translate(${lo + m} ${lo + m}) scale(${s})" shape-rendering="geometricPrecision">
       <rect x="1" y="1" width="30" height="30" rx="7" fill="#fff"/>
-      <path d="${LOGO_BODY}" fill="#7f9a2c"/><path d="${LOGO_LEAF}" fill="#4d5a35"/>
+      <path d="${LOGO_PATHS.board}" fill-rule="evenodd" fill="${LOGO_GREEN}"/><path d="${LOGO_PATHS.olive}" fill="${LOGO_GREEN}"/><path d="${LOGO_PATHS.leaf}" fill="${LEAF_GREEN}"/>
     </g></svg>`;
 }
 
@@ -66,8 +65,9 @@ async function qrPng(qr: QR, caption: string): Promise<Blob> {
   g.save();
   g.translate((lo + m) * cell, (lo + m) * cell);
   g.scale((k * cell) / 32, (k * cell) / 32);
-  g.fillStyle = '#7f9a2c'; g.fill(new Path2D(LOGO_BODY));
-  g.fillStyle = '#4d5a35'; g.fill(new Path2D(LOGO_LEAF));
+  g.fillStyle = '#fff'; g.beginPath(); g.roundRect(1, 1, 30, 30, 7); g.fill();
+  g.fillStyle = LOGO_GREEN; g.fill(new Path2D(LOGO_PATHS.board), 'evenodd'); g.fill(new Path2D(LOGO_PATHS.olive));
+  g.fillStyle = LEAF_GREEN; g.fill(new Path2D(LOGO_PATHS.leaf));
   g.restore();
   g.fillStyle = '#141611';
   g.textAlign = 'center';
