@@ -7,6 +7,7 @@ import './about-stats.css';
 import { countUp, icon, logo, type IconName } from './icons';
 import { BASE } from './router';
 import { LESSONS, UNITS } from './learn/course';
+import { EN_LESSONS, EN_UNITS } from './learn/course-en';
 import { THEMES } from './themes';
 
 const REPO = 'Yeamin-Talukder/jolpai-typing';
@@ -26,7 +27,7 @@ interface Feature { icon: IconName; title: string; text: string; go?: AboutGo; c
 function features(): Feature[] {
   return [
     { icon: 'keyboard', title: 'Bijoy on any keyboard', text: 'No Bijoy software to install. Press the Bijoy keys on any keyboard and the Bangla appears as you type.', go: 'test', cta: 'try it' },
-    { icon: 'lessons', title: 'A full Bijoy course', text: `${LESSONS.length} lessons in ${UNITS.length} units, from the home row to যুক্তাক্ষর, ফলা and reph, with a finger guide and stars.`, go: 'learn', cta: 'start learning' },
+    { icon: 'lessons', title: 'Bijoy and English courses', text: `${LESSONS.length} lessons in ${UNITS.length} units, from the home row to যুক্তাক্ষর, ফলা and reph, with a finger guide and stars. Plus an English course with the same steps, ${EN_LESSONS.length} lessons.`, go: 'learn', cta: 'start learning' },
     { icon: 'exam', title: 'Mock exam', text: 'A timed passage on paper and your answer in a box. Pick a target speed, then see every mistake word by word.', go: 'learn', cta: 'take one' },
     { icon: 'target', title: 'Key mastery', text: 'A keyboard heat map shows how well you know every key, and your weakest keys get a drill made just for them.', go: 'learn', cta: 'see your keys' },
     { icon: 'clock', title: 'Tests your way', text: 'Time, word count or real passages, or set your own time and text. Add punctuation and numbers when you are ready.', go: 'test', cta: 'pick a test' },
@@ -39,8 +40,8 @@ function features(): Feature[] {
 
 export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
   const nums: [IconName, number, string][] = [
-    ['lessons', LESSONS.length, 'lessons'],
-    ['hash', UNITS.length, 'course units'],
+    ['lessons', LESSONS.length + EN_LESSONS.length, 'lessons in 2 courses'],
+    ['hash', UNITS.length + EN_UNITS.length, 'course units'],
     ['palette', THEMES.length, 'themes'],
     ['globe', 2, 'languages'],
   ];

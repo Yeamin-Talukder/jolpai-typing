@@ -111,3 +111,21 @@
 @media (prefers-reduced-motion: reduce) {
   .ln-path-unit i.current { animation: none; }
 }
+
+/* ---------- the two courses: Bijoy and English ---------- */
+.ln-track {
+  display: inline-flex; gap: 2px; margin-left: 10px; padding: 3px; border-radius: 999px; background: var(--bg);
+  text-transform: none; letter-spacing: 0; font-weight: 500; vertical-align: middle;
+}
+.ln-track a {
+  padding: 4px 12px; border-radius: 999px; color: var(--sub); text-decoration: none; font-size: 12.5px; line-height: 1.4;
+  transition: color var(--fast), background var(--fast);
+}
+.ln-track a:hover { color: var(--text); }
+.ln-track a.active { background: var(--main); color: var(--bg); }
+.ln-track a .bn { font-size: 13px; }
+.ln-track a:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+/* the English course: Latin letters in the background, no Bangla font */
+.ln-hero.en::after { content: 'a s d f'; font-family: var(--font-mono); }
+.ln-dash .en { font-family: var(--font-ui); }
+@media (max-width: 700px) { .ln-track { margin: 6px 0 0; } }

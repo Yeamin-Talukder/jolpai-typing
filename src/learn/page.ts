@@ -3,10 +3,12 @@
 // mastery on the right.
 import { Keyboard } from '../keyboard';
 import { icon } from '../icons';
-import { LESSONS, UNITS, lessonsInUnit, weakKeysLesson, type CourseLesson } from './course';
+import type { CourseLesson } from './course';
+import { BIJOY, type Track, type TrackId } from './tracks';
+import { isPlainClick, pathFor } from '../router';
 import { FINGER_NAME, fingerFor, needsShift, physicalKey } from './fingers';
 import { doneCount, isUnlocked, keyAccuracy, learnedKeys, learnStreak, nextLesson, starCount, weakKeys, type LearnData } from './progress';
-import { keyText, starSvg } from './player';
+import { starSvg } from './player';
 import './learn-ui.css';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
@@ -20,37 +22,46 @@ function fmtTime(secs: number) {
 
 const stars = (n: number) => `<span class="ln-stars" aria-label="${n} of 3 stars">${[0, 1, 2].map(i => `<i class="${i < n ? 'on' : ''}">${starSvg()}</i>`).join('')}</span>`;
 
-export interface PageActions { start(l: CourseLesson): void; exam(): void; openAll(on: boolean): void; reset(): void; signedIn: boolean }
+export interface PageActions {
+  start(l: CourseLesson): void; exam(): void; openAll(on: boolean): void; reset(): void; signedIn: boolean;
+  /** Show the other course. */
+  switchTrack(id: TrackId): void;
+}
 
-// the unit shown in the course map (kept while the page is open)
+/** The course on the page (set at the start of every draw). */
+let T: Track = BIJOY;
+/** Class for text in the course's language. */
+const bnc = () => (T.bn ? 'bn' : 'en');
+
+// the unit shown in the course map, per course (kept while the page is open)
+const shown: Record<TrackId, { unit: number | null; for: string }> = { bangla: { unit: null, for: '' }, english: { unit: null, for: '' } };
 let shownUnit: number | null = null;
-let shownFor = '';
 
-const unitDone = (d: LearnData, n: number) => lessonsInUnit(n).filter(l => (d.lessons[l.id]?.stars ?? 0) > 0).length;
+const unitDone = (d: LearnData, n: number) => T.lessonsInUnit(n).filter(l => (d.lessons[l.id]?.stars ?? 0) > 0).length;
 
 /** "Home ⇧" reads as "Home" with "+ Shift" under it in the tabs. */
 const unitLabel = (short: string) => esc(short).replace(' ⇧', '<small>+ Shift</small>');
 /** Where a lesson sits, like 2.3. */
-const lessonNo = (l: CourseLesson) => `${l.unit}.${lessonsInUnit(l.unit).indexOf(l) + 1}`;
+const lessonNo = (l: CourseLesson) => `${l.unit}.${T.lessonsInUnit(l.unit).indexOf(l) + 1}`;
 type LessonState = 'done' | 'current' | 'open' | 'locked';
 function lessonState(d: LearnData, l: CourseLesson, nextId: string): LessonState {
-  if (!isUnlocked(d, LESSONS.indexOf(l))) return 'locked';
+  if (!isUnlocked(d, T.lessons.indexOf(l), T.lessons)) return 'locked';
   if ((d.lessons[l.id]?.stars ?? 0) > 0) return 'done';
   return l.id === nextId ? 'current' : 'open';
 }
 
-/** One key as a small keycap: the Bangla letter, the key to press, and its finger's colour. */
+/** One key as a small keycap: the letter it types, the key to press, and its finger's colour. */
 function keycap(k: string, size = '') {
   const shift = needsShift(k);
   const f = fingerFor(k);
-  return `<span class="ln-kc ${size} z-${f}" title="${esc(physicalKey(k).toUpperCase())}${shift ? ' with Shift' : ''} · ${FINGER_NAME[f]}"><b class="bn">${esc(showChar(keyText(k)))}</b><i>${shift ? '⇧' : ''}${esc(physicalKey(k).toUpperCase())}</i></span>`;
+  return `<span class="ln-kc ${size} z-${f}" title="${esc(physicalKey(k).toUpperCase())}${shift ? ' with Shift' : ''} · ${FINGER_NAME[f]}"><b class="${bnc()}">${esc(showChar(T.keyText(k)))}</b><i>${shift ? '⇧' : ''}${esc(physicalKey(k).toUpperCase())}</i></span>`;
 }
 
 function lessonCard(d: LearnData, l: CourseLesson, j: number, nextId: string): string {
   const rec = d.lessons[l.id];
   const state = lessonState(d, l, nextId);
   const keys = [...new Set(l.newKeys)];
-  const prev = LESSONS[LESSONS.indexOf(l) - 1];
+  const prev = T.lessons[T.lessons.indexOf(l) - 1];
   const foot = rec ? `<span class="ln-l-best">${Math.round(rec.wpm)} wpm · ${Math.round(rec.acc)}%</span>`
     : state === 'current' ? `<span class="ln-l-best go">${icon('play', 12)}start here</span>`
     : state === 'locked' && prev ? `<span class="ln-l-best lock">${icon('lock', 11)}pass ${lessonNo(prev)} to open</span>`
@@ -58,19 +69,19 @@ function lessonCard(d: LearnData, l: CourseLesson, j: number, nextId: string): s
   return `<button class="ln-lesson ${state}" data-lesson="${l.id}" ${state === 'locked' ? 'aria-disabled="true"' : ''} title="${esc(l.summary)}" style="--i:${j}">
         <span class="ln-l-top"><span class="ln-l-n">${lessonNo(l)}</span>${state === 'locked' ? `<span class="ln-lock" aria-label="locked">${icon('lock', 14)}</span>` : stars(rec?.stars ?? 0)}</span>
         ${keys.length ? `<span class="ln-l-keys">${keys.slice(0, 5).map(k => keycap(k)).join('')}${keys.length > 5 ? `<span class="ln-kc more">+${keys.length - 5}</span>` : ''}</span>`
-          : `<span class="ln-l-bn bn">${esc(l.bn)}</span>`}
+          : `<span class="ln-l-bn ${bnc()}">${esc(l.bn)}</span>`}
         <span class="ln-l-title">${esc(l.title)}</span>
         ${foot}
       </button>`;
 }
 
 function unitPanel(d: LearnData, n: number, nextId: string): string {
-  const u = UNITS.find(x => x.n === n)!;
-  const ls = lessonsInUnit(n);
+  const u = T.units.find(x => x.n === n)!;
+  const ls = T.lessonsInUnit(n);
   const ud = unitDone(d, n);
   return `
     <header class="ln-panel-head">
-      <div><h2>${esc(u.title)} <span class="bn">${esc(u.bn)}</span></h2><p>${esc(u.summary)}</p></div>
+      <div><h2>${esc(u.title)} <span class="${bnc()}">${esc(u.bn)}</span></h2><p>${esc(u.summary)}</p></div>
       <div class="ln-unit-prog"><span>${ud}/${ls.length} done</span><i style="--p:${(ud / ls.length) * 100}%"></i></div>
     </header>
     <div class="ln-lessons" data-count="${ls.length}">${ls.map((l, j) => lessonCard(d, l, j, nextId)).join('')}</div>
@@ -82,7 +93,7 @@ const BOARD_ROWS = ['1234567890', 'qwertyuiop', "asdfghjkl;'", 'zxcvbnm,./'];
 
 /** The rows of the keyboard this unit uses, with its keys lit in their finger's colour. */
 function unitBoard(n: number): string {
-  const keys = [...new Set(lessonsInUnit(n).flatMap(l => [...l.newKeys]))].filter(k => k !== ' ');
+  const keys = [...new Set(T.lessonsInUnit(n).flatMap(l => [...l.newKeys]))].filter(k => k !== ' ');
   if (!keys.length) return '';
   const on = new Map<string, string[]>();
   for (const k of keys) { const p = physicalKey(k); on.set(p, [...(on.get(p) ?? []), k]); }
@@ -93,15 +104,15 @@ function unitBoard(n: number): string {
         const ks = on.get(p);
         if (!ks) return `<span class="ln-bk off"><i>${esc(p.toUpperCase())}</i></span>`;
         const lo = ks.find(k => !needsShift(k)), hi = ks.find(k => needsShift(k));
-        return `<span class="ln-bk z-${fingerFor(p)}" title="${esc(p.toUpperCase())} · ${FINGER_NAME[fingerFor(p)]}">${hi ? `<small class="bn">${esc(showChar(keyText(hi)))}</small>` : ''}<b class="bn">${lo ? esc(showChar(keyText(lo))) : ''}</b><i>${esc(p.toUpperCase())}</i></span>`;
+        return `<span class="ln-bk z-${fingerFor(p)}" title="${esc(p.toUpperCase())} · ${FINGER_NAME[fingerFor(p)]}">${hi ? `<small class="${bnc()}">${esc(showChar(T.keyText(hi)))}</small>` : ''}<b class="${bnc()}">${lo ? esc(showChar(T.keyText(lo))) : ''}</b><i>${esc(p.toUpperCase())}</i></span>`;
       }).join('')}</div>`).join('')}
     </div>`;
 }
 
 function tabsHtml(d: LearnData, nextId: string, nextUnit: number): string {
-  return UNITS.map(u => {
-    const ls = lessonsInUnit(u.n), ud = unitDone(d, u.n);
-    const open = ls.some(l => isUnlocked(d, LESSONS.indexOf(l)));
+  return T.units.map(u => {
+    const ls = T.lessonsInUnit(u.n), ud = unitDone(d, u.n);
+    const open = ls.some(l => isUnlocked(d, T.lessons.indexOf(l), T.lessons));
     const badge = ud === ls.length ? icon('check', 14) : open ? String(u.n) : icon('lock', 13);
     return `<button role="tab" class="ln-tab ${u.n === shownUnit ? 'active' : ''} ${ud === ls.length ? 'done' : ''} ${open ? '' : 'locked'} ${u.n === nextUnit ? 'here' : ''}" data-unit="${u.n}" aria-selected="${u.n === shownUnit}" title="Unit ${u.n}: ${esc(u.title)} · ${esc(u.bn)}${open ? '' : ' (locked)'}">
             <span class="ln-tab-n">${badge}</span><span class="ln-tab-t">${unitLabel(u.short)}</span>
@@ -110,15 +121,15 @@ function tabsHtml(d: LearnData, nextId: string, nextUnit: number): string {
   }).join('');
 }
 
-/** All 23 lessons in one strip, grouped by unit: done, the next one, open, locked. */
+/** Every lesson in one strip, grouped by unit: done, the next one, open, locked. */
 function coursePath(d: LearnData, nextId: string): string {
-  return `<div class="ln-path" aria-label="Course path">${UNITS.map(u => `<span class="ln-path-unit" data-unit="${u.n}" title="Unit ${u.n}: ${esc(u.title)}">${lessonsInUnit(u.n).map(l =>
+  return `<div class="ln-path" aria-label="Course path">${T.units.map(u => `<span class="ln-path-unit" data-unit="${u.n}" title="Unit ${u.n}: ${esc(u.title)}">${T.lessonsInUnit(u.n).map(l =>
     `<i class="${lessonState(d, l, nextId)}" title="${lessonNo(l)} ${esc(l.title)}"></i>`).join('')}</span>`).join('')}</div>`;
 }
 
-const HOW = `
+const how = () => `
   <ol class="ln-how">
-    <li><span>${icon('lessons', 20)}</span><b>Learn</b><p>A short explanation, with keys that type themselves so you see the Bangla appear.</p></li>
+    <li><span>${icon('lessons', 20)}</span><b>Learn</b><p>A short explanation, with keys that type themselves so you see the ${T.bn ? 'Bangla' : 'words'} appear.</p></li>
     <li><span>${icon('keyboard', 20)}</span><b>Meet the keys</b><p>Each new key, the finger to use, and three presses to remember it.</p></li>
     <li><span>${icon('target', 20)}</span><b>Drill, then words</b><p>A wrong key is not typed: find the right one. The keyboard and hands guide you.</p></li>
     <li><span>${starSvg()}</span><b>Earn stars</b><p>90% accuracy passes and opens the next lesson. Speed earns the second and third star.</p></li>
@@ -127,8 +138,10 @@ const HOW = `
 function showHow() {
   const d = document.createElement('dialog');
   d.className = 'share-dlg how-dlg';
-  d.innerHTML = `<div class="sh-top"><h2>${icon('info', 18)}how each lesson works</h2><button class="sh-close" aria-label="Close">${icon('x', 18)}</button></div>${HOW}
-    <p class="ln-how-more">The course has ${LESSONS.length} lessons in ${UNITS.length} units, from where to rest your fingers to the Bijoy rules (vowel signs typed first, যুক্তাক্ষর, ফলা, reph) and full speed.</p>`;
+  d.innerHTML = `<div class="sh-top"><h2>${icon('info', 18)}how each lesson works</h2><button class="sh-close" aria-label="Close">${icon('x', 18)}</button></div>${how()}
+    <p class="ln-how-more">${T.bn
+      ? `The Bijoy course has ${T.lessons.length} lessons in ${T.units.length} units, from where to rest your fingers to the Bijoy rules (vowel signs typed first, যুক্তাক্ষর, ফলা, reph) and full speed.`
+      : `The English course has ${T.lessons.length} lessons in ${T.units.length} units, from the home row to capitals, punctuation, numbers and full speed.`}</p>`;
   document.body.appendChild(d);
   const close = () => { if (d.open) d.close(); d.remove(); };
   d.addEventListener('click', e => { if (e.target === d || (e.target as Element).closest('.sh-close')) close(); });
@@ -136,38 +149,43 @@ function showHow() {
   d.showModal();
 }
 
-export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions) {
-  const done = doneCount(d), total = LESSONS.length;
+export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions, track: Track = BIJOY) {
+  T = track;
+  const done = doneCount(d, T.lessons), total = T.lessons.length;
   const pct = Math.round((done / total) * 100);
-  const next = nextLesson(d);
-  const nextI = LESSONS.indexOf(next);
-  const started = Object.keys(d.lessons).length > 0;
-  const weak = weakKeys(d);
+  const next = nextLesson(d, T.lessons);
+  const nextI = T.lessons.indexOf(next);
+  const started = T.lessons.some(l => d.lessons[l.id]);
+  const weak = weakKeys(d, 6, T.fromStatKey);
   const R = 52, C = 2 * Math.PI * R;
   // open on the unit being worked on (until you pick another one)
-  if (shownUnit === null || shownFor !== next.id) { shownUnit = next.unit; shownFor = next.id; }
+  const sh = shown[T.id];
+  if (sh.unit === null || sh.for !== next.id) { sh.unit = next.unit; sh.for = next.id; }
+  shownUnit = sh.unit;
+  const trackSwitch = `<div class="ln-track" role="tablist" aria-label="Course">${(['bangla', 'english'] as TrackId[]).map(id =>
+    `<a role="tab" href="${pathFor({ page: 'learn', track: id === 'english' ? 'english' : undefined })}" data-track="${id}" class="${T.id === id ? 'active' : ''}" aria-selected="${T.id === id}">${id === 'bangla' ? '<span class="bn">বাংলা</span> (Bijoy)' : 'English'}</a>`).join('')}</div>`;
   const lastExam = d.exams[d.exams.length - 1];
   const bestNet = d.exams.reduce((m, e) => Math.max(m, e.net), 0);
 
   el.innerHTML = `
     <div class="ln ln-dash">
-      <section class="ln-hero">
+      <section class="ln-hero ${T.bn ? '' : 'en'}">
         <div class="ln-ring" aria-label="${pct}% of the course done">
           <svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="${R}"/><circle class="ring-fg" cx="60" cy="60" r="${R}" style="--len:${C};--off:${C * (1 - pct / 100)}"/></svg>
           <div class="ln-ring-text"><b>${pct}%</b><span>done</span></div>
         </div>
         <div class="ln-hero-text">
-          <div class="ln-eyebrow">${icon('lessons', 15)}Bijoy touch-typing course<button class="ln-how-btn ${started ? '' : 'glow'}" data-how>${icon('info', 14)}how it works</button></div>
-          <h1>Type Bangla <span>without looking</span> <span class="ln-bn">বিজয়ে না দেখে টাইপ</span></h1>
+          <div class="ln-eyebrow">${icon('lessons', 15)}${T.bn ? 'Bijoy' : 'English'} touch-typing course<button class="ln-how-btn ${started ? '' : 'glow'}" data-how>${icon('info', 14)}how it works</button>${trackSwitch}</div>
+          <h1>Type ${T.bn ? 'Bangla' : 'English'} <span>without looking</span>${T.bn ? ' <span class="ln-bn">বিজয়ে না দেখে টাইপ</span>' : ''}</h1>
           <div class="ln-cta">
             <button class="btn primary ln-go" data-start="${next.id}">${icon('play', 16)}${started ? 'continue' : 'start the course'}</button>
-            <span class="ln-next">${started ? 'next up: ' : 'lesson 1: '}<b>${esc(next.title)}</b>${[...next.bn.replace(/\s/g, '')].every(c => next.title.includes(c)) ? '' : ` <span class="bn">${esc(next.bn)}</span>`}<small>unit ${next.unit} · lesson ${nextI + 1} of ${total}</small></span>
+            <span class="ln-next">${started ? 'next up: ' : 'lesson 1: '}<b>${esc(next.title)}</b>${!T.bn || [...next.bn.replace(/\s/g, '')].every(c => next.title.includes(c)) ? '' : ` <span class="bn">${esc(next.bn)}</span>`}<small>unit ${next.unit} · lesson ${nextI + 1} of ${total}</small></span>
           </div>
           ${coursePath(d, next.id)}
         </div>
         <div class="ln-stats">
           <div class="ln-stat">${icon('check', 17)}<b>${done}<small>/${total}</small></b><span>lessons</span></div>
-          <div class="ln-stat">${starSvg()}<b>${starCount(d)}<small>/${total * 3}</small></b><span>stars</span></div>
+          <div class="ln-stat">${starSvg()}<b>${starCount(d, T.lessons)}<small>/${total * 3}</small></b><span>stars</span></div>
           <div class="ln-stat">${icon('flame', 17)}<b>${learnStreak(d)}</b><span>day streak</span></div>
           <div class="ln-stat">${icon('clock', 17)}<b>${fmtTime(d.secs)}</b><span>practised</span></div>
         </div>
@@ -200,9 +218,9 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
           </div>
           <div class="keyboard ln-heat" aria-label="Your accuracy on each key"></div>
           <div class="ln-weak">
-            ${weak.length ? `${weak.slice(0, 4).map(k => `<span class="chip"><b class="bn">${esc(showChar(keyText(k)))}</b><i>${esc(physicalKey(k).toUpperCase())}</i><em>${Math.round((keyAccuracy(d, k, 1) ?? 0) * 100)}%</em></span>`).join('')}
+            ${weak.length ? `${weak.slice(0, 4).map(k => `<span class="chip"><b class="${bnc()}">${esc(showChar(T.keyText(k)))}</b><i>${esc(physicalKey(k).toUpperCase())}</i><em>${Math.round((keyAccuracy(d, T.statKey(k), 1) ?? 0) * 100)}%</em></span>`).join('')}
               <button class="btn primary" data-weak="${esc(weak.join(''))}">${icon('target', 15)}practise</button>`
-              : Object.keys(d.keys).length ? `<p class="ln-weak-none">${icon('check', 14)}No weak keys: every key you have practised is above 97%.</p>`
+              : Object.keys(d.keys).some(s => T.fromStatKey(s) !== null) ? `<p class="ln-weak-none">${icon('check', 14)}No weak keys: every key you have practised is above 97%.</p>`
               : `<div class="ln-mastery-empty"><p>Every key lights up here as you practise: red needs work, green is mastered. Your weakest keys get a drill made just for them.</p>
                   <button class="btn" data-start="${next.id}">${icon('play', 14)}${started ? 'continue' : 'start lesson 1'}</button></div>`}
           </div>
@@ -218,19 +236,20 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
 
   // mastery heatmap: one colour per physical key, from both of its letters
   const heat = new Keyboard(el.querySelector('.ln-heat')!);
-  heat.render('bangla');
+  heat.render(T.id);
   el.querySelectorAll<HTMLElement>('.ln-heat [data-k]').forEach(k => {
     const lo = k.dataset.k!;
-    const hi = Object.keys(d.keys).filter(c => physicalKey(c) === lo && c !== lo);
+    // every stored key of this course on this physical key (its letter and its Shift letter)
+    const mine = Object.keys(d.keys).filter(s => { const c = T.fromStatKey(s); return c !== null && physicalKey(c) === lo; });
     let hit = 0, miss = 0;
-    for (const c of [lo, ...hi]) { hit += d.keys[c]?.hit ?? 0; miss += d.keys[c]?.miss ?? 0; }
+    for (const s of mine) { hit += d.keys[s].hit; miss += d.keys[s].miss; }
     if (hit + miss < 5) { k.classList.add('heat-none'); return; }
     const a = hit / (hit + miss);
     // 85% or less is red, 100% is full green
     const t = Math.max(0, Math.min(1, (a - 0.85) / 0.15));
     k.style.setProperty('--heat', `${Math.round(t * 100)}%`);
     k.classList.add('heat');
-    k.title = `${keyText(lo)} (${lo.toUpperCase()}): ${Math.round(a * 100)}% of ${hit + miss} presses · ${fingerFor(lo)}`;
+    k.title = `${T.keyText(lo)} (${lo.toUpperCase()}): ${Math.round(a * 100)}% of ${hit + miss} presses · ${FINGER_NAME[fingerFor(lo)]}`;
   });
 
   // animate the ring in
@@ -238,9 +257,17 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
 
   el.onclick = e => {
     const t = e.target as Element;
+    const sw = t.closest<HTMLAnchorElement>('[data-track]');
+    if (sw) {
+      if (!isPlainClick(e as MouseEvent)) return;
+      e.preventDefault();
+      if (sw.dataset.track !== T.id) act.switchTrack(sw.dataset.track as TrackId);
+      return;
+    }
     const tab = t.closest<HTMLElement>('[data-unit]');
     if (tab) {
       shownUnit = Number(tab.dataset.unit);
+      shown[T.id].unit = shownUnit;
       el.querySelectorAll<HTMLElement>('.ln-tab').forEach(x => {
         const sel = Number(x.dataset.unit) === shownUnit;
         x.classList.toggle('active', sel);
@@ -253,21 +280,21 @@ export function renderLearnPage(el: HTMLElement, d: LearnData, act: PageActions)
     }
     if (t.closest('[data-how]')) { showHow(); return; }
     const go = t.closest<HTMLElement>('[data-start]');
-    if (go) { act.start(LESSONS.find(l => l.id === go.dataset.start)!); return; }
+    if (go) { act.start(T.lessons.find(l => l.id === go.dataset.start)!); return; }
     const b = t.closest<HTMLElement>('[data-lesson]');
     if (b) {
       if (b.getAttribute('aria-disabled') === 'true') {
         b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
         return;
       }
-      act.start(LESSONS.find(l => l.id === b.dataset.lesson)!);
+      act.start(T.lessons.find(l => l.id === b.dataset.lesson)!);
       return;
     }
     if (t.closest('[data-exam]')) { act.exam(); return; }
     const w = t.closest<HTMLElement>('[data-weak]');
-    if (w) { act.start(weakKeysLesson(w.dataset.weak!, learnedKeys(d) || LESSONS[3].allowed)); return; }
+    if (w) { act.start(T.weakLesson(w.dataset.weak!, learnedKeys(d, T.lessons) || T.lessons[3].allowed)); return; }
     if (t.closest('[data-reset]')) {
-      if (confirm('Reset all course progress: stars, key mastery and practice time? Your test results are kept.')) act.reset();
+      if (confirm('Reset all course progress, in both the Bijoy and the English course: stars, key mastery and practice time? Your test results are kept.')) act.reset();
     }
   };
   // arrow keys move between unit tabs

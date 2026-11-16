@@ -1,13 +1,14 @@
 // Addresses for each page, so back/forward, refresh, bookmarks and shared links
 // all land where you were:
 //   /                 the typing test
-//   /learn/           the Bijoy course     /learn/<lesson id>/   a lesson     /learn/exam/   the mock exam
+//   /learn/           the Bijoy course     /learn/english/   the English course
+//   /learn/<lesson id>/   a lesson (English ids start with en-)     /learn/exam/   the mock exam
 //   /profile/  /settings/  /about/
 // A shared profile stays /?p=<id>, so printed QR codes keep working.
 // The build writes a real page at each of these addresses (see vite.config.ts).
 
 export type Page = 'test' | 'learn' | 'profile' | 'settings' | 'about';
-export interface Route { page: Page; lesson?: string; exam?: boolean }
+export interface Route { page: Page; lesson?: string; exam?: boolean; track?: 'english' }
 
 /** Where the site lives: '/jolpai-typing/' on GitHub Pages, '/' in development. */
 export const BASE = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
@@ -19,7 +20,11 @@ export function routeFromPath(path: string): Route {
   const rest = path.startsWith(BASE) ? path.slice(BASE.length) : path.replace(/^\/+/, '');
   const [first, second] = rest.split('/').filter(Boolean).map(decodeURIComponent);
   if (!PAGES.includes(first as Page)) return { page: 'test' };
-  if (first === 'learn' && second) return second === 'exam' ? { page: 'learn', exam: true } : { page: 'learn', lesson: second };
+  if (first === 'learn' && second) {
+    if (second === 'exam') return { page: 'learn', exam: true };
+    if (second === 'english') return { page: 'learn', track: 'english' };
+    return { page: 'learn', lesson: second };
+  }
   return { page: first as Page };
 }
 
@@ -28,6 +33,7 @@ export function pathFor(r: Route): string {
   if (r.page === 'test') return BASE;
   if (r.page === 'learn' && r.exam) return `${BASE}learn/exam/`;
   if (r.page === 'learn' && r.lesson) return `${BASE}learn/${encodeURIComponent(r.lesson)}/`;
+  if (r.page === 'learn' && r.track === 'english') return `${BASE}learn/english/`;
   return `${BASE}${r.page}/`;
 }
 

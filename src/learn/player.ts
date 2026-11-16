@@ -1,12 +1,13 @@
 // The guided lesson player: explanations with self-typing demos, meeting each
 // new key, then drills and words with a finger guide. Wrong keys are not typed
 // (you find the right one), which is how touch typing is learned.
-import { bijoyToUnicode, KEY_LABELS, unicodeToSegments, usKey } from '../bijoy';
+import { usKey } from '../bijoy';
 import { Keyboard } from '../keyboard';
 import { icon, reduceMotion } from '../icons';
 import { keySound } from '../sound';
 import type { Prefs } from '../prefs';
-import { drillItems, LESSONS, timedItems, UNITS, wordItems, type CourseLesson, type Explainer } from './course';
+import type { CourseLesson, Explainer } from './course';
+import { BIJOY, trackOfLesson, type Track } from './tracks';
 import { FINGER_NAME, fingerFor, handsSvg, needsShift, physicalKey, shiftFinger, showFinger, type Finger } from './fingers';
 import { loadLearn, recordRun, threeStarWpm, type KeyRec, type Pending } from './progress';
 
@@ -29,8 +30,8 @@ export interface PlayerOptions {
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const SIGN = /^[ঁ-ঃ়া-্ৗ]/;
 const showChar = (s: string) => (SIGN.test(s) ? '◌' + s : s);
-/** What a single key types, for labels. */
-export const keyText = (k: string) => (k === ' ' ? 'space' : KEY_LABELS[k] ?? bijoyToUnicode(k) ?? k);
+/** What a single Bijoy key types, for labels. */
+export const keyText = (k: string) => BIJOY.keyText(k);
 const keyName = (k: string) => (k === ' ' ? 'space' : physicalKey(k).toUpperCase());
 
 const STEP_NAMES: Record<Step['kind'] | 'drill' | 'words' | 'timed' | 'result', string> = {
@@ -62,16 +63,22 @@ export class LessonPlayer {
   private cardIndex = 0;
   private done = false;
   private ticker = 0;
+  /** The course this lesson belongs to (Bijoy or English). */
+  private t: Track;
+  /** Class for text in the course's language. */
+  private bnc: string;
 
   constructor(root: HTMLElement, o: PlayerOptions) {
     this.root = root;
     this.o = o;
     const l = o.lesson;
+    this.t = trackOfLesson(l.id);
+    this.bnc = this.t.bn ? 'bn' : 'en';
     if (l.intro?.length) this.steps.push({ kind: 'explain', cards: l.intro });
     for (const k of new Set(l.newKeys)) this.steps.push({ kind: 'meet', key: k });
-    if (l.drill) this.steps.push({ kind: 'type', name: 'drill', items: drillItems(l) });
-    if (l.timed) this.steps.push({ kind: 'type', name: 'timed', items: timedItems(l), timed: l.timed });
-    else if (l.words) this.steps.push({ kind: 'type', name: 'words', items: wordItems(l) });
+    if (l.drill) this.steps.push({ kind: 'type', name: 'drill', items: this.t.drillItems(l) });
+    if (l.timed) this.steps.push({ kind: 'type', name: 'timed', items: this.t.timedItems(l), timed: l.timed });
+    else if (l.words) this.steps.push({ kind: 'type', name: 'words', items: this.t.wordItems(l) });
     this.render();
     document.addEventListener('keydown', this.onKey, true);
     this.go(0);
@@ -88,8 +95,8 @@ export class LessonPlayer {
 
   private render() {
     const l = this.o.lesson;
-    const unit = UNITS.find(u => u.n === l.unit);
-    const n = LESSONS.indexOf(l) + 1;
+    const unit = this.t.units.find(u => u.n === l.unit);
+    const n = this.t.lessons.indexOf(l) + 1;
     const pills = [...this.steps.map(s => (s.kind === 'type' ? s.name : s.kind)), 'result']
       .filter((s, i, a) => s !== 'meet' || a.indexOf('meet') === i)
       .map(s => `<span class="lp-pill" data-pill="${s}">${STEP_NAMES[s as keyof typeof STEP_NAMES]}</span>`).join('<i class="lp-pill-line"></i>');
@@ -98,8 +105,8 @@ export class LessonPlayer {
         <header class="lp-top">
           <button class="lp-back" data-act="exit" title="Back to the course (Esc)">${icon('next', 16, 'flip')}<span>course</span></button>
           <div class="lp-title">
-            <span class="lp-eyebrow">${unit ? `unit ${unit.n} · ${esc(unit.title)}` : 'practice'}${n > 0 ? ` · lesson ${n} of ${LESSONS.length}` : ''}</span>
-            <b>${esc(l.title)} <span class="bn">${esc(l.bn)}</span></b>
+            <span class="lp-eyebrow">${unit ? `unit ${unit.n} · ${esc(unit.title)}` : 'practice'}${n > 0 ? ` · lesson ${n} of ${this.t.lessons.length}` : ''}</span>
+            <b>${esc(l.title)}${this.t.bn ? ` <span class="bn">${esc(l.bn)}</span>` : ''}</b>
           </div>
           <nav class="lp-pills" aria-label="Lesson steps">${pills}</nav>
           <div class="lp-live" aria-live="off"><span data-live="acc"><b>100%</b> acc</span><span data-live="wpm"><b>0</b> wpm</span><span data-live="time" hidden><b>0</b> s</span></div>
@@ -113,7 +120,7 @@ export class LessonPlayer {
       </div>`;
     this.body = this.root.querySelector('.lp-body')!;
     this.kb = new Keyboard(this.root.querySelector('.lp-kb')!);
-    this.kb.render('bangla');
+    this.kb.render(this.t.id);
     this.paintZones();
     this.hands = this.root.querySelector('.hands')!;
     this.input = this.root.querySelector('.lp-input')!;
@@ -160,7 +167,7 @@ export class LessonPlayer {
     const f = FINGER_NAME[fingerFor(k)];
     if (k === ' ') return `Press <kbd>space</kbd> with your thumb`;
     const shift = needsShift(k) ? `Hold <kbd>${shiftFinger(k) === 'lp' ? 'left' : 'right'} Shift</kbd> (${FINGER_NAME[shiftFinger(k)]}), then ` : '';
-    return `${shift}${shift ? 'press' : 'Press'} <kbd>${esc(keyName(k))}</kbd> for <b class="bn">${esc(showChar(keyText(k)))}</b> with your <b>${f}</b>`;
+    return `${shift}${shift ? 'press' : 'Press'} <kbd>${esc(keyName(k))}</kbd>${this.t.bn ? ` for <b class="bn">${esc(showChar(this.t.keyText(k)))}</b>` : ''} with your <b>${f}</b>`;
   }
 
   private setPill(kind: string) {
@@ -205,7 +212,7 @@ export class LessonPlayer {
         <h2>${esc(c.title)}</h2>
         <p>${esc(c.text)}</p>
         ${c.demo ? `<div class="demo" aria-label="Keys pressed one by one">
-          <div class="demo-keys">${[...c.demo].map((k, i) => `<span class="demo-key" data-i="${i}"><b>${esc(keyName(k))}</b><i>${esc(showChar(keyText(k)))}</i></span>`).join('<span class="demo-plus">+</span>')}</div>
+          <div class="demo-keys">${[...c.demo].map((k, i) => `<span class="demo-key" data-i="${i}"><b>${esc(keyName(k))}</b><i class="${this.bnc}">${esc(showChar(this.t.keyText(k)))}</i></span>`).join('<span class="demo-plus">+</span>')}</div>
           <div class="demo-arrow">${icon('next', 18)}</div>
           <div class="demo-out" aria-live="polite"></div>
           <button class="demo-replay" data-act="replay" title="Show again">${icon('restart', 14)}</button>
@@ -226,7 +233,8 @@ export class LessonPlayer {
     const caps = [...this.body.querySelectorAll<HTMLElement>('.demo-key')];
     if (!out) return;
     const step = reduceMotion() ? 0 : 850;
-    if (!step) { out.textContent = bijoyToUnicode(keys); caps.forEach(c => c.classList.add('done')); return; }
+    out.classList.toggle('bn', this.t.bn);
+    if (!step) { out.textContent = this.t.render(keys); caps.forEach(c => c.classList.add('done')); return; }
     const run = (i: number) => {
       if (!this.body.contains(out)) return;
       if (i === 0) { caps.forEach(c => c.classList.remove('done', 'press')); out.textContent = ''; out.classList.remove('pop'); }
@@ -236,7 +244,7 @@ export class LessonPlayer {
         this.kb.press(keys[i], true);
         this.guide(keys[i]);
         this.later(() => { cap.classList.remove('press'); cap.classList.add('done'); }, 380);
-        out.textContent = bijoyToUnicode(keys.slice(0, i + 1));
+        out.textContent = this.t.render(keys.slice(0, i + 1));
         out.classList.remove('pop'); void out.offsetWidth; out.classList.add('pop');
         this.later(() => run(i + 1), step);
       } else {
@@ -255,11 +263,11 @@ export class LessonPlayer {
       <div class="lp-meet">
         <div class="lp-meet-cap ${shift ? 'shifted' : ''}">
           ${shift ? `<span class="lp-meet-shift">${icon('trend', 14)}shift</span>` : ''}
-          <span class="lp-meet-bn">${esc(showChar(keyText(k)))}</span>
+          <span class="lp-meet-bn ${this.bnc}">${esc(showChar(this.t.keyText(k)))}</span>
           <span class="lp-meet-key">${esc(keyName(k))}</span>
         </div>
         <div class="lp-meet-text">
-          <h2>New key: <span class="bn">${esc(showChar(keyText(k)))}</span></h2>
+          <h2>New key: <span class="${this.bnc}">${esc(showChar(this.t.keyText(k)))}</span></h2>
           <p>${shift ? `Hold the <b>${shiftFinger(k) === 'lp' ? 'left' : 'right'} Shift</b> with your ${FINGER_NAME[shiftFinger(k)]}, then press <kbd>${esc(keyName(k))}</kbd>` : `Press <kbd>${esc(keyName(k))}</kbd>`} with your <b>${f}</b>. Keep the other fingers resting on the home row.</p>
           <div class="lp-meet-dots" aria-label="Press it three times">${[0, 1, 2].map(i => `<i data-dot="${i}"></i>`).join('')}</div>
           <p class="lp-meet-msg" aria-live="polite">Press it three times.</p>
@@ -271,7 +279,7 @@ export class LessonPlayer {
   private showType(s: Extract<Step, { kind: 'type' }>) {
     // flatten the items into the keys to press, with a space between items
     this.targets = [];
-    const segsOf = s.items.map(w => unicodeToSegments(w));
+    const segsOf = s.items.map(w => this.t.segments(w));
     segsOf.forEach((segs, item) => {
       segs.forEach((g, seg) => { for (const key of g.keys) this.targets.push({ key, item, seg }); });
       if (item < s.items.length - 1) this.targets.push({ key: ' ', item, seg: -1 });
@@ -283,7 +291,7 @@ export class LessonPlayer {
     this.body.innerHTML = `
       <div class="lp-type">
         <div class="lp-type-head"><h2>${title}</h2><div class="lp-progress"><i></i></div></div>
-        <div class="lp-line-wrap"><div class="lp-line">${segsOf.map((segs, i) =>
+        <div class="lp-line-wrap"><div class="lp-line ${this.bnc}">${segsOf.map((segs, i) =>
           `<span class="it" data-i="${i}">${segs.map((g, j) => `<span class="sg" data-s="${j}">${esc(g.text)}</span>`).join('')}</span>${i < segsOf.length - 1 ? '<span class="gap"></span>' : ''}`).join('')}</div></div>
         <div class="lp-strip" aria-live="polite"></div>
         <p class="lp-hint" aria-live="polite"></p>
@@ -327,8 +335,8 @@ export class LessonPlayer {
       const segKeys = this.targets.filter(x => x.item === t.item && x.seg === t.seg);
       const first = this.targets.indexOf(segKeys[0]);
       const segText = itemEl.querySelector(`.sg[data-s="${t.seg}"]`)?.textContent ?? '';
-      strip.innerHTML = `<span class="sk-for"><span class="bn">${esc(segText)}</span> =</span>` + segKeys.map((x, i) =>
-        `<span class="sk ${first + i < this.pos ? 'done' : first + i === this.pos ? 'cur' : ''}">${needsShift(x.key) ? '<em>⇧</em>' : ''}<b>${esc(keyName(x.key))}</b><i class="bn">${esc(showChar(keyText(x.key)))}</i></span>`).join('<span class="sk-plus">+</span>');
+      strip.innerHTML = `<span class="sk-for"><span class="${this.bnc}">${esc(segText)}</span> =</span>` + segKeys.map((x, i) =>
+        `<span class="sk ${first + i < this.pos ? 'done' : first + i === this.pos ? 'cur' : ''}">${needsShift(x.key) ? '<em>⇧</em>' : ''}<b>${esc(keyName(x.key))}</b>${this.t.bn ? `<i class="bn">${esc(showChar(this.t.keyText(x.key)))}</i>` : ''}</span>`).join('<span class="sk-plus">+</span>');
     }
     this.body.querySelector<HTMLElement>('.lp-hint')!.innerHTML = this.hintHtml(t.key);
     this.guide(t.key);
@@ -364,7 +372,7 @@ export class LessonPlayer {
     for (const ch of v) if (ch === ' ' || /[\x21-\x7e]/.test(ch)) this.press(ch);
   }
 
-  private stat(k: string): KeyRec { return (this.keyStats[k] ??= { hit: 0, miss: 0, ms: 0 }); }
+  private stat(k: string): KeyRec { return (this.keyStats[this.t.statKey(k)] ??= { hit: 0, miss: 0, ms: 0 }); }
 
   private press(k: string) {
     const s = this.steps[this.si];
@@ -376,7 +384,7 @@ export class LessonPlayer {
       const msg = this.body.querySelector<HTMLElement>('.lp-meet-msg')!;
       if (!ok) {
         this.shake(this.body.querySelector('.lp-meet-cap'));
-        msg.innerHTML = `That was <b class="bn">${esc(showChar(keyText(k)))}</b> (${esc(keyName(k))}). ${this.hintHtml(s.key)}.`;
+        msg.innerHTML = `That was <b class="${this.bnc}">${esc(showChar(this.t.keyText(k)))}</b>${this.t.bn ? ` (${esc(keyName(k))})` : ''}. ${this.hintHtml(s.key)}.`;
         return;
       }
       this.body.querySelector(`[data-dot="${this.meetCount}"]`)?.classList.add('on');
@@ -471,9 +479,10 @@ export class LessonPlayer {
     const run = { lessonId: l.id, acc, wpm, secs: this.typingSecs, keys: this.keyStats };
     const { stars, improved } = recordRun(loadLearn(), run, l.goal);
     this.o.onRecorded?.({ run, goal: l.goal });
-    const i = LESSONS.indexOf(l);
-    const next = i >= 0 ? LESSONS[i + 1] : undefined;
-    const missed = Object.entries(this.keyStats).filter(([, v]) => v.miss > 0).sort((a, b) => b[1].miss - a[1].miss).slice(0, 6);
+    const i = this.t.lessons.indexOf(l);
+    const next = i >= 0 ? this.t.lessons[i + 1] : undefined;
+    const missed = Object.entries(this.keyStats).filter(([, v]) => v.miss > 0).sort((a, b) => b[1].miss - a[1].miss).slice(0, 6)
+      .map(([s, v]) => [this.t.fromStatKey(s) ?? s, v] as const);
     const msg = stars === 3 ? 'Perfect! Three stars.' : stars === 2 ? 'Great work!' : stars === 1 ? 'Lesson passed.' : 'Almost there';
     const sub = stars === 0
       ? 'You need 90% accuracy to pass. Slow down a little: accuracy first, speed comes by itself.'
@@ -490,7 +499,7 @@ export class LessonPlayer {
           <div><span class="label">time</span><b>${Math.round(this.typingSecs)}</b><small>seconds typing</small></div>
         </div>
         ${missed.length ? `<div class="lp-missed"><span class="label">keys you missed</span>${missed.map(([k, v]) =>
-          `<span class="chip"><b class="bn">${esc(showChar(keyText(k)))}</b>${k === ' ' ? '' : `<i>${esc(keyName(k))}</i>`}<em>×${v.miss}</em></span>`).join('')}</div>` : ''}
+          `<span class="chip"><b class="${this.bnc}">${esc(showChar(this.t.keyText(k)))}</b>${k === ' ' || !this.t.bn ? '' : `<i>${esc(keyName(k))}</i>`}<em>×${v.miss}</em></span>`).join('')}</div>` : ''}
         <div class="lp-result-actions">
           ${stars > 0 && next ? `<button class="btn primary" data-act="next-lesson">${icon('next', 15)}next: ${esc(next.title)}</button>` : ''}
           <button class="btn ${stars === 0 || !next ? 'primary' : ''}" data-act="retry">${icon('restart', 15)}try again</button>
@@ -521,8 +530,8 @@ export class LessonPlayer {
       }
       case 'retry': this.o.onStart(this.o.lesson); break;
       case 'next-lesson': {
-        const i = LESSONS.indexOf(this.o.lesson);
-        if (LESSONS[i + 1]) this.o.onStart(LESSONS[i + 1]);
+        const i = this.t.lessons.indexOf(this.o.lesson);
+        if (this.t.lessons[i + 1]) this.o.onStart(this.t.lessons[i + 1]);
         break;
       }
     }

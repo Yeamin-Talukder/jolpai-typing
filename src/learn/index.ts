@@ -1,7 +1,8 @@
 // The Learn section: the course page, with the lesson player and the mock
 // exam on top of it.
 import type { Prefs } from '../prefs';
-import { LESSONS, type CourseLesson } from './course';
+import type { CourseLesson } from './course';
+import { BIJOY, ENGLISH, TRACKS, trackOfLesson, type Track, type TrackId } from './tracks';
 import type { ExamScore } from './exam-score';
 import { loadSetup, MockExam, type ExamSetup } from './exam';
 import { renderLearnPage } from './page';
@@ -19,8 +20,10 @@ export interface LearnHooks {
   /** A mock exam finished: add it to the test history. */
   onExamDone(rec: ExamRec, score: ExamScore, setup: ExamSetup): void;
   /** The course page, a lesson or the exam is now showing: keep the address in step. */
-  onRoute(sub: { lesson?: string; exam?: boolean }): void;
+  onRoute(sub: { lesson?: string; exam?: boolean; track?: 'english' }): void;
 }
+
+const TRACK_KEY = 'jolpai-type:learn-track';
 
 /** Everything the course page shows (not the queue of unsaved runs). */
 const shownState = (d: LearnData) => JSON.stringify({ ...d, pending: undefined });
@@ -32,6 +35,16 @@ export class Learn {
   private exam: MockExam | null = null;
   /** What the course page last showed, so a sync that changes nothing does not redraw it. */
   private drawn = '';
+  /** The course on the page: the last one used in this browser, Bijoy at first. */
+  private track: Track = (() => { try { return TRACKS[localStorage.getItem(TRACK_KEY) as TrackId] ?? BIJOY; } catch { return BIJOY; } })();
+
+  /** The course shown on the course page. */
+  get trackId(): TrackId { return this.track.id; }
+
+  private setTrack(t: Track) {
+    this.track = t;
+    try { localStorage.setItem(TRACK_KEY, t.id); } catch { /* ignore */ }
+  }
 
   constructor(el: HTMLElement, hooks: LearnHooks) {
     this.el = el;
@@ -63,18 +76,26 @@ export class Learn {
         this.h.onProgress({ openAll: on });
       },
       reset: () => { this.h.onReset().catch(err => alert(`Could not reset the course in your account: ${(err as Error).message}`)).finally(() => this.show()); },
-    });
+      switchTrack: id => { this.setTrack(TRACKS[id]); this.show(); },
+    }, this.track);
     if (!quiet) this.enter();
-    if (!quiet) this.h.onRoute({});
+    if (!quiet) this.h.onRoute(this.track === ENGLISH ? { track: 'english' } : {});
   }
 
-  /** Open what an address asks for: a lesson by id, the exam, or the course page. */
-  open(sub: { lesson?: string; exam?: boolean }) {
-    const i = sub.lesson ? LESSONS.findIndex(x => x.id === sub.lesson) : -1;
-    // a locked lesson (or an unknown one) shows the course page instead
-    if (i >= 0 && isUnlocked(loadLearn(), i)) this.start(LESSONS[i]);
-    else if (sub.exam) this.startExam();
-    else this.show();
+  /** Open what an address asks for: a lesson by id, the exam, or a course page. */
+  open(sub: { lesson?: string; exam?: boolean; track?: 'english' }) {
+    if (sub.lesson) {
+      const t = trackOfLesson(sub.lesson);
+      this.setTrack(t);
+      const i = t.lessons.findIndex(x => x.id === sub.lesson);
+      // a locked lesson (or an unknown one) shows its course page instead
+      if (i >= 0 && isUnlocked(loadLearn(), i, t.lessons)) { this.start(t.lessons[i]); return; }
+      this.show();
+      return;
+    }
+    if (sub.exam) { this.startExam(); return; }
+    this.setTrack(sub.track === 'english' ? ENGLISH : BIJOY);
+    this.show();
   }
 
   /** A mock exam is under way, so leaving would lose it. */
@@ -90,6 +111,7 @@ export class Learn {
   /** Start (or restart) a lesson. */
   start(l: CourseLesson) {
     this.stop();
+    if (l.id !== 'weak' && l.id !== 'en-weak') this.setTrack(trackOfLesson(l.id));
     this.el.classList.add('playing');
     document.body.classList.add('focus'); // the lesson fills the screen
     window.scrollTo({ top: 0 });

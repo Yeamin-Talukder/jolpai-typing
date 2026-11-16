@@ -19,9 +19,10 @@ function routePages(): Plugin {
     closeBundle() {
       const out = page('./dist/');
       const html = readFileSync(`${out}index.html`, 'utf8');
-      const course = readFileSync(page('./src/learn/course.ts'), 'utf8');
+      // lesson ids from both courses (Bijoy and English)
+      const course = ['./src/learn/course.ts', './src/learn/course-en.ts'].map(f => readFileSync(page(f), 'utf8')).join('\n');
       const lessons = [...course.matchAll(/\{ id: '([a-z0-9-]+)', unit: \d+,/g)].map(m => m[1]);
-      const routes = ['learn', 'learn/exam', 'profile', 'settings', 'about', ...lessons.map(id => `learn/${id}`)];
+      const routes = ['learn', 'learn/english', 'learn/exam', 'profile', 'settings', 'about', ...lessons.map(id => `learn/${id}`)];
       for (const r of routes) {
         mkdirSync(`${out}${r}`, { recursive: true });
         writeFileSync(`${out}${r}/index.html`, html);

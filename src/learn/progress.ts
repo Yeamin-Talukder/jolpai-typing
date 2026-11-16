@@ -49,20 +49,22 @@ export function starsFor(acc: number, wpm: number, goal: number): number {
 }
 export const threeStarWpm = (goal: number) => Math.round(goal * 1.4);
 
+// Each function below works on one course's lessons; the Bijoy course is the default.
+
 /** A lesson is open once the one before it has at least one star. */
-export function isUnlocked(d: LearnData, i: number): boolean {
+export function isUnlocked(d: LearnData, i: number, lessons: CourseLesson[] = LESSONS): boolean {
   if (d.openAll || i === 0) return true;
-  return (d.lessons[LESSONS[i - 1].id]?.stars ?? 0) > 0;
+  return (d.lessons[lessons[i - 1].id]?.stars ?? 0) > 0;
 }
 
 /** The lesson to continue with: the first open one without a star, or the last one. */
-export function nextLesson(d: LearnData): CourseLesson {
-  const i = LESSONS.findIndex((l, n) => isUnlocked(d, n) && !(d.lessons[l.id]?.stars));
-  return LESSONS[i >= 0 ? i : LESSONS.length - 1];
+export function nextLesson(d: LearnData, lessons: CourseLesson[] = LESSONS): CourseLesson {
+  const i = lessons.findIndex((l, n) => isUnlocked(d, n, lessons) && !(d.lessons[l.id]?.stars));
+  return lessons[i >= 0 ? i : lessons.length - 1];
 }
 
-export const doneCount = (d: LearnData) => LESSONS.filter(l => (d.lessons[l.id]?.stars ?? 0) > 0).length;
-export const starCount = (d: LearnData) => LESSONS.reduce((a, l) => a + (d.lessons[l.id]?.stars ?? 0), 0);
+export const doneCount = (d: LearnData, lessons: CourseLesson[] = LESSONS) => lessons.filter(l => (d.lessons[l.id]?.stars ?? 0) > 0).length;
+export const starCount = (d: LearnData, lessons: CourseLesson[] = LESSONS) => lessons.reduce((a, l) => a + (d.lessons[l.id]?.stars ?? 0), 0);
 
 const dayStr = (t: Date) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
 
@@ -94,7 +96,7 @@ const addDay = (d: LearnData, t = new Date()) => {
 export function applyRun(d: LearnData, r: RunResult, goal: number): { stars: number; improved: boolean } {
   const stars = starsFor(r.acc, r.wpm, goal);
   const old = d.lessons[r.lessonId];
-  if (r.lessonId !== 'weak') {
+  if (r.lessonId !== 'weak' && r.lessonId !== 'en-weak') { // weak-key drills are not lessons
     d.lessons[r.lessonId] = {
       stars: Math.max(old?.stars ?? 0, stars),
       wpm: Math.max(old?.wpm ?? 0, Math.round(r.wpm * 10) / 10),
@@ -181,20 +183,24 @@ export function keyAccuracy(d: LearnData, k: string, min = 6): number | null {
   return r.hit / (r.hit + r.miss);
 }
 
-/** The keys you miss most (Bijoy key characters), worst first. */
-export function weakKeys(d: LearnData, n = 6): string[] {
+/**
+ * The keys you miss most in one course, worst first. `own` turns a stored key
+ * name into that course's key, or null for the other course (Bijoy by default).
+ */
+export function weakKeys(d: LearnData, n = 6, own: (s: string) => string | null = s => (s.length === 1 ? s : null)): string[] {
   return Object.keys(d.keys)
-    .filter(k => k !== ' ')
-    .map(k => ({ k, a: keyAccuracy(d, k, 8) }))
+    .map(s => ({ s, k: own(s) }))
+    .filter((x): x is { s: string; k: string } => !!x.k && x.k !== ' ')
+    .map(x => ({ k: x.k, a: keyAccuracy(d, x.s, 8) }))
     .filter((x): x is { k: string; a: number } => x.a !== null && x.a < 0.97)
     .sort((x, y) => x.a - y.a)
     .slice(0, n)
     .map(x => x.k);
 }
 
-/** Every key taught by the lessons you have finished. */
-export function learnedKeys(d: LearnData): string {
+/** Every key taught by the lessons you have finished in a course. */
+export function learnedKeys(d: LearnData, lessons: CourseLesson[] = LESSONS): string {
   let keys = '';
-  for (const l of LESSONS) if ((d.lessons[l.id]?.stars ?? 0) > 0) keys = l.allowed;
+  for (const l of lessons) if ((d.lessons[l.id]?.stars ?? 0) > 0) keys = l.allowed;
   return keys;
 }

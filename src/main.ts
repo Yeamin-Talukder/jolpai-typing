@@ -19,7 +19,7 @@ import { accountsEnabled, clearAccountHistory, countLesson, countTest, currentSh
 import { SharePanel } from './share';
 import { renderAbout } from './about';
 import { BASE, isPlainClick, pathFor, routeFromPath, type Page, type Route } from './router';
-import { LESSONS } from './learn/course';
+import { findLesson } from './learn/tracks';
 import { Learn } from './learn';
 import { renderProgressChart } from './progress-chart';
 import { THEMES, applyTheme, currentTheme, renderThemePicker } from './themes';
@@ -921,9 +921,11 @@ let urlMode: 'push' | 'replace' | 'none' = 'push';
 function titleFor(r: Route): string {
   if (r.page === 'learn' && r.exam) return 'Mock exam · Learn Bijoy · Jolpai Typing';
   if (r.page === 'learn' && r.lesson) {
-    const l = LESSONS.find(x => x.id === r.lesson);
-    return l ? `${l.title} · Learn Bijoy · Jolpai Typing` : 'Learn Bijoy typing · Jolpai Typing';
+    const l = findLesson(r.lesson);
+    if (!l) return 'Learn Bijoy typing · Jolpai Typing';
+    return `${l.title} · ${l.id.startsWith('en-') ? 'Learn English' : 'Learn Bijoy'} · Jolpai Typing`;
   }
+  if (r.page === 'learn' && r.track === 'english') return 'Learn English typing · Jolpai Typing';
   return { test: PAGE_TITLE, learn: 'Learn Bijoy typing · Jolpai Typing', profile: 'Your profile · Jolpai Typing',
     settings: 'Settings · Jolpai Typing', about: 'About · Jolpai Typing' }[r.page];
 }
@@ -938,14 +940,18 @@ function setUrl(r: Route) {
 }
 
 /** Show a route, writing the address the given way. */
+/** What an address asks the Learn section to open (while openRoute runs). */
+let learnRoute: Route | null = null;
+
 function openRoute(r: Route, mode: typeof urlMode) {
   const before = urlMode;
   urlMode = mode;
+  learnRoute = r.page === 'learn' ? r : null;
   try {
     showView(r.page);
-    if (r.page === 'learn' && (r.lesson || r.exam)) learn.open(r);
   } finally {
     urlMode = before;
+    learnRoute = null;
   }
 }
 
@@ -971,7 +977,9 @@ function showView(v: View) {
     document.title = PAGE_TITLE;
     sharedData = null;
   }
-  if (v !== 'shared') setUrl({ page: v as Page });
+  // the Learn link opens the course used last; an address says exactly which one
+  if (v === 'learn') setUrl(learnRoute ?? { page: 'learn', track: learn.trackId === 'english' ? 'english' : undefined });
+  else if (v !== 'shared') setUrl({ page: v as Page });
   view = v;
   document.body.dataset.view = v;
   profileEl.hidden = v !== 'profile' && v !== 'shared';
@@ -996,7 +1004,7 @@ function showView(v: View) {
   shownPath = location.pathname + location.search;
   if (v === 'shared') return; // openShared() draws it once loaded
   if (v === 'about') { renderAbout(aboutEl, to => showView(to)); enter(aboutEl); return; }
-  if (v === 'learn') { learn.show(); return; }
+  if (v === 'learn') { if (learnRoute) learn.open(learnRoute); else learn.show(); return; }
   if (v === 'profile') {
     profileView.lang = settings.lang;
     profileView.shown = 25;
