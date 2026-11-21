@@ -30,7 +30,7 @@ function features(): Feature[] {
     { icon: 'lessons', title: 'Bijoy and English courses', text: `${LESSONS.length} lessons in ${UNITS.length} units, from the home row to যুক্তাক্ষর, ফলা and reph, with a finger guide and stars. Plus an English course with the same steps, ${EN_LESSONS.length} lessons.`, go: 'learn', cta: 'start learning' },
     { icon: 'exam', title: 'Mock exam', text: 'A timed passage on paper and your answer in a box. Pick a target speed, then see every mistake word by word.', go: 'learn', cta: 'take one' },
     { icon: 'target', title: 'Key mastery', text: 'A keyboard heat map shows how well you know every key, and your weakest keys get a drill made just for them.', go: 'learn', cta: 'see your keys' },
-    { icon: 'clock', title: 'Tests your way', text: 'Time, word count or real passages, or set your own time and text. Add punctuation and numbers when you are ready.', go: 'test', cta: 'pick a test' },
+    { icon: 'clock', title: 'Tests your way', text: 'Time, word count or real passages, or set your own time and text. English words come in three levels, 200, 1k and 5k, and punctuation and numbers are there when you are ready.', go: 'test', cta: 'pick a test' },
     { icon: 'play', title: 'Results and replay', text: 'A speed graph and full details for every test, and a replay of every key you pressed, shown on the keyboard.' },
     { icon: 'trend', title: 'Progress and profile', text: 'A progress graph, personal bests and an activity calendar. Phone and computer results are kept apart.', go: 'profile', cta: 'see yours' },
     { icon: 'qr', title: 'Share and sync', text: 'Sign in with Google to keep everything on every device, and share your profile with a link or a QR code.', go: 'profile', cta: 'open profile' },
@@ -129,6 +129,7 @@ export function renderAbout(el: HTMLElement, go: (v: AboutGo) => void) {
         <h2><span class="ab-h-ico">${GITHUB}</span>open source</h2>
         <p>Jolpai Typing is free and open source under the <a class="ab-inline" href="${REPO_URL}/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>. If it helps you practise, please <b>give it a star on GitHub</b>: it helps other
           Bangla typists find it.</p>
+        <p class="ab-credit">English word levels: the <a class="ab-inline" href="https://www.newgeneralservicelist.com" target="_blank" rel="noopener">New General Service List</a> (Graded Reader edition) by Browne and Culligan, <a class="ab-inline" href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.</p>
         <div class="ab-stats" aria-live="polite">
           <span class="ab-stat">${STAR}<b id="ab-stars">–</b> stars</span>
           <span class="ab-stat">${icon('share', 16)}<b id="ab-forks">–</b> forks</span>

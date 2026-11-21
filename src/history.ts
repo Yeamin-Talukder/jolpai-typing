@@ -65,9 +65,29 @@ function save(list: Entry[]) {
   try { localStorage.setItem(KEY, JSON.stringify(kept)); } catch { /* storage full or blocked */ }
 }
 
+/** The English word level of a random-words test, read from its label
+ *  ("time 30 1k punctuation"); older results and english 200 have none. */
+export function levelOf(e: Pick<Entry, 'lang' | 'mode' | 'label'>): string {
+  if (e.lang !== 'english' || (e.mode !== 'time' && e.mode !== 'words')) return '';
+  const tok = e.label.split(' ')[2];
+  return tok === '1k' || tok === '5k' ? tok : '200';
+}
+
 // personal bests are per device too: a phone score never competes with a computer one
-const sameTest = (a: Entry, b: Entry) =>
-  a.lang === b.lang && a.mode === b.mode && a.amount === b.amount && deviceOf(a) === deviceOf(b);
+export const sameTest = (a: Pick<Entry, 'lang' | 'mode' | 'amount' | 'label' | 'dev'>, b: Pick<Entry, 'lang' | 'mode' | 'amount' | 'label' | 'dev'>) =>
+  a.lang === b.lang && a.mode === b.mode && a.amount === b.amount && deviceOf(a) === deviceOf(b) && levelOf(a) === levelOf(b);
+
+/** Best and recent average speed for a test like this one, for the hint under the words. */
+export function statsFor(probe: Pick<Entry, 'lang' | 'mode' | 'amount' | 'label' | 'dev'>): { best: number; avg: number; count: number } | null {
+  const list = loadHistory().filter(x => sameTest(x, probe));
+  if (!list.length) return null;
+  const recent = list.slice(-10);
+  return {
+    best: Math.max(...list.map(x => x.wpm)),
+    avg: recent.reduce((t, x) => t + x.wpm, 0) / recent.length,
+    count: list.length,
+  };
+}
 
 /** Store a result. Returns the previous best for the same test, if any. */
 export function addEntry(e: Entry): { previousBest: number | null } {

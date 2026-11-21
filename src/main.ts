@@ -1,11 +1,11 @@
 import './style.css';
-import { randomWords } from './words';
+import { EN_LEVELS, englishPool, isLevel, randomWords, type EnLevel } from './words';
 import { BANGLA_PASSAGES, ENGLISH_PASSAGES } from './passages';
 import { BANGLA_WORDS } from './words-bn';
 import { bijoyToUnicode, unicodeToSegments, usKey } from './bijoy';
 import { Keyboard } from './keyboard';
 import { lessonItems, lessonsFor } from './lessons';
-import { addEntry, clearHistory, loadHistory, newId, type Entry } from './history';
+import { addEntry, clearHistory, loadHistory, newId, statsFor, type Entry } from './history';
 import { renderProfile, type ProfileView, type ResultFilter, type SharedData } from './profile';
 import { FONT_PX, DEFAULT_PREFS, loadPrefs, savePrefs } from './prefs';
 import { keySound, previewSound } from './sound';
@@ -18,6 +18,7 @@ import { askAmount, askText, customAmount, customText, setCustomAmount, typeable
 import { accountsEnabled, clearAccountHistory, countLesson, countTest, currentShareId, currentUser, initAccount, loadShared, onLearnChange, resetLearnEverywhere, saveLearnToAccount, saveToAccount, signIn, signOut, startSharing, stopSharing, type AccountUser } from './account';
 import { SharePanel } from './share';
 import { renderAbout } from './about';
+import { celebrate, stopCelebration } from './celebrate';
 import { BASE, isPlainClick, pathFor, routeFromPath, type Page, type Route } from './router';
 import { findLesson } from './learn/tracks';
 import { Learn } from './learn';
@@ -61,17 +62,19 @@ const SETTINGS_KEY = 'jolpai-type:settings';
 
 // showKeyboard replaced an older `keyboard` setting that was saved as on for
 // everyone; the on-screen keyboard is now off until the typist turns it on.
-interface Settings { lang: Lang; mode: Mode; amount: number; showKeyboard: boolean; punctuation: boolean; numbers: boolean }
+interface Settings { lang: Lang; mode: Mode; amount: number; showKeyboard: boolean; punctuation: boolean; numbers: boolean; level: EnLevel }
 
 function loadSettings(): Settings {
+  let level: EnLevel = '200';
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '');
     const lang: Lang = s.lang === 'bangla' ? 'bangla' : 'english';
+    level = isLevel(s.level) ? s.level : '200';
     if (['time', 'words', 'passage', 'lesson', 'custom'].includes(s.mode) && amountsFor(s.mode, lang).includes(s.amount)) {
-      return { lang, mode: s.mode, amount: s.amount, showKeyboard: s.showKeyboard === true, punctuation: s.punctuation === true, numbers: s.numbers === true };
+      return { lang, mode: s.mode, amount: s.amount, showKeyboard: s.showKeyboard === true, punctuation: s.punctuation === true, numbers: s.numbers === true, level };
     }
   } catch { /* first visit or storage blocked */ }
-  return { lang: 'english', mode: 'time', amount: 30, showKeyboard: false, punctuation: false, numbers: false };
+  return { lang: 'english', mode: 'time', amount: 30, showKeyboard: false, punctuation: false, numbers: false, level };
 }
 function saveSettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* ignore */ }
@@ -147,7 +150,7 @@ const timed = () => settings.mode === 'time' || settings.mode === 'passage' || (
 const randomWordsMode = () => settings.mode === 'time' || settings.mode === 'words';
 
 function pickWords(n: number): Word[] {
-  const plain = randomWords(n, settings.lang === 'bangla' ? BANGLA_WORDS : undefined);
+  const plain = randomWords(n, settings.lang === 'bangla' ? BANGLA_WORDS : englishPool(settings.level));
   return addExtras(plain, settings.lang, settings).map(makeWord);
 }
 
@@ -188,8 +191,13 @@ function isCorrect(i: number) {
 
 // ---------- setup ----------
 function renderConfig() {
-  $('lang-name').textContent = settings.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english';
-  $('lang-pick').title = settings.lang === 'bangla' ? 'Switch to English' : 'Switch to Bangla (Bijoy)';
+  // the level only changes random words, so it is shown for time and words tests
+  const lvl = settings.lang === 'english' && randomWordsMode() ? EN_LEVELS.find(l => l.id === settings.level)! : null;
+  $('lang-name').textContent = settings.lang === 'bangla' ? 'বাংলা (বিজয়)' : lvl ? lvl.name : 'english';
+  $('lang-dots').innerHTML = lvl ? [1, 2, 3].map(n => `<i class="${n <= lvl.dots ? 'on' : ''}"></i>`).join('') : '';
+  $('lang-dots').title = lvl ? lvl.desc : '';
+  if (!langMenu.hidden) drawLangMenu();
+  drawTestBest();
   // punctuation and numbers apply to random words (time and words tests)
   const extrasEl = $('extras');
   extrasEl.hidden = !randomWordsMode();
@@ -310,9 +318,50 @@ function applyChoice() {
 
 const hasCustomText = (lang: Lang = settings.lang) => typeableWords(customText(lang), lang).words.length > 0;
 
-// the language switch above the words
-$('lang-pick').addEventListener('click', () => {
-  settings.lang = settings.lang === 'bangla' ? 'english' : 'bangla';
+// the language and word level menu above the words
+const langMenu = $('lang-menu');
+const langBtn = $('lang-pick');
+
+interface LangChoice { lang: Lang; level: EnLevel | null; name: string; desc: string; dots: number }
+const LANG_CHOICES: LangChoice[] = [
+  { lang: 'bangla', level: null, name: 'বাংলা (বিজয়)', desc: 'Bangla words, typed with the Bijoy layout', dots: 0 },
+  ...EN_LEVELS.map(l => ({ lang: 'english' as const, level: l.id, name: l.name, desc: l.desc, dots: l.dots })),
+];
+
+const dotsHTML = (n: number) => [1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('');
+
+function drawLangMenu() {
+  const isOn = (c: LangChoice) => c.lang === settings.lang && (c.level === null || c.level === settings.level);
+  const note = randomWordsMode() ? '' : `<p class="lm-note">${icon('info', 13)}Word levels change the words in time and words tests.</p>`;
+  langMenu.innerHTML = `<div class="lm-title">language</div>${LANG_CHOICES.map((c, i) => `
+    ${i === 1 ? '<div class="lm-title">english · word level</div>' : ''}
+    <button class="lm-row${isOn(c) ? ' active' : ''}" role="menuitemradio" aria-checked="${isOn(c)}" data-choice="${i}" style="--i:${i}">
+      <span class="lm-ico${c.lang === 'bangla' ? ' bn' : ''}">${c.lang === 'bangla' ? 'অ' : c.level}</span>
+      <span class="lm-text"><b>${c.name}</b><small>${c.desc}</small></span>
+      ${c.dots ? `<span class="lang-dots" aria-label="difficulty ${c.dots} of 3">${dotsHTML(c.dots)}</span>` : ''}
+      <span class="lm-check">${icon('check', 15)}</span>
+    </button>`).join('')}${note}`;
+}
+
+function openLangMenu(open: boolean) {
+  if (open === !langMenu.hidden) return;
+  langMenu.hidden = !open;
+  langBtn.setAttribute('aria-expanded', String(open));
+  langBtn.classList.toggle('open', open);
+  if (open) {
+    drawLangMenu();
+    enter(langMenu);
+    (langMenu.querySelector<HTMLElement>('.lm-row.active') ?? langMenu.querySelector<HTMLElement>('.lm-row'))?.focus();
+  }
+}
+
+/** Switch to a language (and, for English, a word level) and start a fresh test. */
+function chooseLang(lang: Lang, level: EnLevel | null) {
+  const langChanged = lang !== settings.lang;
+  if (!langChanged && (level === null || level === settings.level)) return;
+  if (level) settings.level = level;
+  if (!langChanged) { saveSettings(); renderConfig(); reset(); return; }
+  settings.lang = lang;
   if (settings.mode === 'lesson') settings.amount = Math.min(settings.amount, lessonsFor(settings.lang).length - 1);
   if (settings.mode === 'custom' && !hasCustomText()) {
     // no text in this language yet: ask for some, or go back to a timed test
@@ -326,7 +375,41 @@ $('lang-pick').addEventListener('click', () => {
   saveSettings();
   renderConfig();
   reset();
+}
+
+langBtn.addEventListener('click', () => openLangMenu(langMenu.hidden));
+langMenu.addEventListener('click', e => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-choice]');
+  if (!b) return;
+  const c = LANG_CHOICES[Number(b.dataset.choice)];
+  openLangMenu(false);
+  chooseLang(c.lang, c.level);
+  focusInput();
 });
+langMenu.addEventListener('keydown', e => {
+  const rows = [...langMenu.querySelectorAll<HTMLElement>('.lm-row')];
+  const i = rows.indexOf(document.activeElement as HTMLElement);
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    rows[(i + (e.key === 'ArrowDown' ? 1 : rows.length - 1)) % rows.length]?.focus();
+  } else if (e.key === 'Home' || e.key === 'End') {
+    e.preventDefault();
+    rows[e.key === 'Home' ? 0 : rows.length - 1]?.focus();
+  }
+});
+document.addEventListener('click', e => {
+  if (!langMenu.hidden && !langMenu.contains(e.target as Node) && !langBtn.contains(e.target as Node)) openLangMenu(false);
+});
+
+/** Your best and recent average for the test as it is set up now, shown before you start. */
+function drawTestBest() {
+  const el = $('test-best');
+  if (settings.mode === 'custom') { el.innerHTML = ''; return; }
+  const st = statsFor({ lang: settings.lang, mode: settings.mode, amount: settings.amount, label: testLabel(), dev: deviceKind() });
+  el.innerHTML = st
+    ? `<span title="your best on this test">${icon('trophy', 14)}<b>${Math.round(st.best)}</b> best</span><span class="tb-sep"></span><span title="average of your last ${Math.min(10, st.count)}">${icon('trend', 14)}<b>${Math.round(st.avg)}</b> avg</span>`
+    : `<span class="tb-first">${icon('flame', 14)}first try at this test</span>`;
+}
 
 /** Tell the typist the changed settings start with the next test. */
 function noteNext() {
@@ -339,6 +422,8 @@ function noteNext() {
 /** Start a new test, or the same words again when `repeat` is set. */
 function reset(repeat = false) {
   clearInterval(tick);
+  stopCelebration();
+  $('r-wpm').classList.remove('pb-hit');
   if (repeat && words.length) {
     // keep the same words (a time test keeps the extra ones it added too)
   } else if (settings.mode === 'custom') {
@@ -375,6 +460,7 @@ function reset(repeat = false) {
   renderAllWords();
   updateLive();
   setProgress(0, false);
+  drawTestBest();
   enter(wrapEl);
   focusInput();
   requestAnimationFrame(updateCaret);
@@ -525,6 +611,11 @@ let tabArmed = false;
 
 document.addEventListener('keydown', e => {
   if (document.querySelector('dialog[open]')) return; // the share panel handles its own keys
+  if (!langMenu.hidden) {
+    // the open language menu takes the keys: Esc or Tab closes it, typing never starts a test behind it
+    if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); openLangMenu(false); langBtn.focus(); }
+    return;
+  }
   if (e.key === 'Escape' && !themeMenu.hidden) { e.preventDefault(); openThemeMenu(false); if (view === 'test' && !finished) focusInput(); return; }
   if (e.key === 'Escape' && replay.closeFull()) { e.preventDefault(); return; } // leave the expanded replay first
   if (view === 'learn') { if (e.key === 'Escape') learn.escape(); return; } // lessons handle their own keys
@@ -573,6 +664,7 @@ function startIfNeeded() {
   document.body.classList.add('typing');
   configEl.classList.add('faded');
   if (!themeMenu.hidden) openThemeMenu(false);
+  openLangMenu(false);
   tick = window.setInterval(onSecond, 1000);
   if (timed()) setProgress(1 / settings.amount, true);
 }
@@ -781,6 +873,8 @@ function finish() {
     if (previousBest !== null && Math.round(wpm) > Math.round(previousBest)) {
       $('r-pb-text').textContent = `new personal best · was ${Math.round(previousBest)}`;
       pb.hidden = false;
+      // confetti once the speed has counted up to its new best
+      celebrate($('r-wpm'), reduceMotion() ? 0 : 750);
     }
   }
 }
@@ -794,7 +888,9 @@ function testLabel() {
   }
   const amount = settings.mode === 'lesson' ? lessonsFor(settings.lang)[settings.amount].name : fmtAmount(settings.mode, settings.amount);
   const extras = randomWordsMode() ? `${settings.punctuation ? ' punctuation' : ''}${settings.numbers ? ' numbers' : ''}` : '';
-  return `${settings.mode} ${amount}${extras}`;
+  // the English word level sits right after the amount ("time 30 1k"); english 200 is the default and left out
+  const level = randomWordsMode() && settings.lang === 'english' && settings.level !== '200' ? ` ${settings.level}` : '';
+  return `${settings.mode} ${amount}${level}${extras}`;
 }
 
 let lastWpm = 0; // the last result's speed, for the chart's average line
@@ -818,7 +914,9 @@ function showResult(r: { wpm: number; raw: number; acc: number; sec: number; c: 
   $('r-chars').textContent = `${r.c.correct}/${r.c.incorrect}/${r.c.extra}/${timed() ? 0 : r.c.missed}`;
   countUp($('r-cons'), consistency(samples.map(s => s.raw)), '%');
   $('r-time').textContent = `${Math.round(r.sec)}s`;
-  $('r-type').innerHTML = `${testLabel()}<br>${settings.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english'}`;
+  // the second line names the language, with the word level for English random words ("english 1k")
+  const lvl = settings.lang === 'english' && randomWordsMode() ? ' ' + settings.level : '';
+  $('r-type').innerHTML = `${testLabel().replace(/ (1k|5k)(?= |$)/, '')}<br>${settings.lang === 'bangla' ? 'বাংলা (বিজয়)' : 'english' + lvl}`;
   enter(resultEl);
   drawChart(true);
   // focus the result itself, not a button, so a stray Space or Enter does nothing
@@ -1230,6 +1328,8 @@ window.addEventListener('resize', () => {
 });
 // pills measure text, so place them again once the web fonts arrive
 document.fonts?.ready.then(() => { movePills(); updateCaret(); });
+// and whenever the settings bar changes size (styles arriving, panels showing or hiding)
+new ResizeObserver(() => movePills(configEl)).observe(configEl);
 
 // ---------- account ----------
 const accountEl = $('account');

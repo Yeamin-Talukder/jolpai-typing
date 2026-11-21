@@ -94,7 +94,7 @@ There was no good place to practise **Bangla typing**. English has polished, mod
 ## Features
 
 ### Typing tests
-- **Bangla (Bijoy) and English**, switched with one click.
+- **Bangla (Bijoy) and English**, switched with one click. English has three word levels: **english 200**, **english 1k** and **english 5k**.
 - **Modes:** time (15 s to 10 min), word count (10 to 100), real passages (1 to 10 min), and your own **custom** time, word count or text.
 - **Punctuation and numbers** can be added to random-word tests.
 - **Live stats** while you type: speed, accuracy, burst and a progress bar (each one optional).
@@ -173,6 +173,7 @@ src/
   bijoy.ts           the Bijoy to Unicode engine
   keyboard.ts        the on-screen keyboard
   words.ts           English words      words-bn.ts   Bangla words
+  english-ranked.ts  English word levels (NGSL-GR, CC BY-SA 4.0)
   passages.ts        practice passages in both languages
   profile.ts         profile page        progress-chart.ts, chart.ts   graphs
   replay.ts          key-by-key replay   settings-page.ts, prefs.ts   settings
@@ -195,7 +196,7 @@ No. The site turns your Bijoy key presses into Bangla by itself, on any keyboard
 Yes. The Learn section starts at the home row and teaches every key with the finger to use, then joined letters (যুক্তাক্ষর), ফলা and reph, up to full speed.
 
 ### Does it work for English typing too?
-Yes. Switch to english for the same tests, results and progress tracking.
+Yes. Switch to english for the same tests, results and progress tracking, and pick a word level: the 200 most common words, 1,000 everyday words, or about 5,000 longer and rarer ones.
 
 ### Is my progress saved?
 Yes, in your browser, straight away. Sign in with Google to keep it on every device.
@@ -228,6 +229,8 @@ If Jolpai Typing helps you type Bangla, please **[give it a star](https://github
 ## License
 
 Jolpai Typing is free and open source under the [MIT License](LICENSE). You can use, change and share the code, as long as the copyright notice stays with it.
+
+The English word levels in [`src/english-ranked.ts`](src/english-ranked.ts) come from the **New General Service List, Graded Reader edition** by Charles Browne and Brent Culligan ([newgeneralservicelist.com](https://www.newgeneralservicelist.com)), used under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). That file is shared under the same licence; the changes are listed at its top.
 
 ## Author
 
